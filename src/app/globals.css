@@ -1,0 +1,125 @@
+@import "tailwindcss";
+
+/* ---------------------------------------------------------------------------
+   Design tokens. Light by default, dark via prefers-color-scheme.
+   --------------------------------------------------------------------------- */
+:root {
+  --bg: #f6f7f9;
+  --surface: #ffffff;
+  --surface-2: #f2f4f7;
+  --ink: #0b1220;
+  --muted: #475467;
+  --subtle: #98a2b3;
+  --line: #e4e7ec;
+  --brand: #12b76a;
+  --brand-strong: #067647;
+  --brand-soft: #e7f8ef;
+  --paid: #f79009;
+  --paid-strong: #b54708;
+  --paid-soft: #fff4e0;
+  --danger: #d92d20;
+  --danger-soft: #fef3f2;
+  --info: #2e90fa;
+  --info-soft: #eff8ff;
+  --shadow: 0 1px 2px rgb(16 24 40 / 0.06), 0 1px 3px rgb(16 24 40 / 0.08);
+  --shadow-lg: 0 12px 32px -8px rgb(16 24 40 / 0.18), 0 4px 8px -4px rgb(16 24 40 / 0.08);
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0a0f1a;
+    --surface: #111827;
+    --surface-2: #1a2233;
+    --ink: #f2f4f7;
+    --muted: #b0b8c6;
+    --subtle: #6b7689;
+    --line: #243044;
+    --brand: #32d583;
+    --brand-strong: #6ce9a6;
+    --brand-soft: #0e2d1f;
+    --paid: #fdb022;
+    --paid-strong: #fec84b;
+    --paid-soft: #33230a;
+    --danger: #f97066;
+    --danger-soft: #3a1512;
+    --info: #53b1fd;
+    --info-soft: #102a43;
+    --shadow: 0 1px 2px rgb(0 0 0 / 0.4);
+    --shadow-lg: 0 12px 32px -8px rgb(0 0 0 / 0.6);
+    color-scheme: dark;
+  }
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-subtle: var(--subtle);
+  --color-line: var(--line);
+  --color-brand: var(--brand);
+  --color-brand-strong: var(--brand-strong);
+  --color-brand-soft: var(--brand-soft);
+  --color-paid: var(--paid);
+  --color-paid-strong: var(--paid-strong);
+  --color-paid-soft: var(--paid-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+  --font-sans: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
+  --shadow-card: var(--shadow);
+  --shadow-float: var(--shadow-lg);
+  --animate-fade-up: fade-up 0.35s ease-out both;
+  --animate-pop: pop 0.25s ease-out both;
+}
+
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes pop {
+  0% { transform: scale(0.9); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+html {
+  -webkit-tap-highlight-color: transparent;
+  text-size-adjust: 100%;
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-feature-settings: "cv11", "ss01";
+}
+
+/* Respect iOS safe areas for the fixed bottom nav */
+.pb-safe { padding-bottom: max(env(safe-area-inset-bottom), 0px); }
+.mb-nav { margin-bottom: calc(4rem + env(safe-area-inset-bottom)); }
+
+:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
+
+/* Hide Google Maps footer clutter on small screens a little */
+.gm-style-cc { opacity: 0.7; }
+
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { scrollbar-width: none; }
+
+/* Long-form text (legal pages) */
+.prose-ng h1 { font-size: 2.25rem; font-weight: 800; letter-spacing: -0.02em; line-height: 1.1; }
+.prose-ng .lead { margin-top: 0.5rem; color: var(--subtle); }
+.prose-ng h2 { margin-top: 2.25rem; font-size: 1.25rem; font-weight: 700; }
+.prose-ng p, .prose-ng ul { margin-top: 0.75rem; color: var(--muted); line-height: 1.7; }
+.prose-ng ul { list-style: disc; padding-left: 1.25rem; }
+.prose-ng li + li { margin-top: 0.4rem; }
+.prose-ng b { color: var(--ink); }
