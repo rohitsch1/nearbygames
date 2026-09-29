@@ -1,15 +1,17 @@
 "use client";
 
-import { Check, MapPin, X } from "lucide-react";
+import { Check, MapPin, MessageCircle, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
-import { acceptRequest, declineRequest } from "@/app/actions/games";
+import { acceptRequest, declineRequest, openRequestChat } from "@/app/actions/games";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, LinkButton } from "@/components/ui/button";
 import { Input } from "@/components/ui/field";
+import { RatingSummary } from "@/components/ui/rating";
+import { VerifiedTick } from "@/components/ui/verified-tick";
 import { formatWhen, timeAgo } from "@/lib/format";
 import { SPORT_BY_ID } from "@/lib/sports";
 import type { HostRequestRow } from "@/lib/types";
@@ -35,6 +37,13 @@ export function HostRequestCard({ request: r }: { request: HostRequestRow }) {
       router.push(`/messages/${res.data!.conversationId}`);
     });
 
+  const chat = () =>
+    startTransition(async () => {
+      const res = await openRequestChat(r.id);
+      if (!res.ok) return void toast.error(res.error);
+      router.push(`/messages/${res.data!.conversationId}`);
+    });
+
   const decline = () =>
     startTransition(async () => {
       const res = await declineRequest(r.id, reason);
@@ -54,9 +63,13 @@ export function HostRequestCard({ request: r }: { request: HostRequestRow }) {
         <Avatar name={r.full_name} src={r.avatar_url} size={52} />
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-            <p className="font-bold">{r.full_name ?? "Guest player"}</p>
+            <p className="flex items-center gap-1.5 font-bold">
+              {r.full_name ?? "Guest player"}
+              {r.id_verified && <VerifiedTick />}
+            </p>
             <Badge tone={rel.tone}>{rel.label}</Badge>
           </div>
+          <RatingSummary avg={r.rating_avg} count={r.rating_count} className="mt-0.5" />
           <p className="mt-0.5 flex items-center gap-1 text-sm text-muted">
             <MapPin className="size-3.5" />
             {r.distance_band ? `Lives ${r.distance_band} away` : r.area_name ?? "Area not shared"}
@@ -77,15 +90,25 @@ export function HostRequestCard({ request: r }: { request: HostRequestRow }) {
             </div>
           </div>
         ) : (
-          <div className="mt-4 grid grid-cols-2 gap-2">
+          <div className="mt-4 grid grid-cols-3 gap-2">
             <Button variant="outline" onClick={() => setDeclining(true)} disabled={pending} icon={<X className="size-4" />}>Decline</Button>
+            <Button variant="secondary" onClick={chat} disabled={pending} icon={<MessageCircle className="size-4" />}>
+              {r.conversation_id ? "Chat" : "Message"}
+            </Button>
             <Button onClick={accept} loading={pending} icon={<Check className="size-4" />}>Accept</Button>
           </div>
         )
       ) : (
-        <p className="mt-3 text-sm font-semibold text-muted">
-          {r.status === "accepted" ? "✓ Accepted" : r.status === "declined" ? "Declined" : "Withdrawn by player"}
-        </p>
+        <div className="mt-3 flex items-center justify-between gap-3">
+          <p className="text-sm font-semibold text-muted">
+            {r.status === "accepted" ? "✓ Accepted" : r.status === "declined" ? "Declined" : "Withdrawn by player"}
+          </p>
+          {r.conversation_id && (
+            <LinkButton href={`/messages/${r.conversation_id}`} size="sm" variant="ghost" icon={<MessageCircle className="size-4" />}>
+              {r.status === "accepted" ? "Chat" : "View chat"}
+            </LinkButton>
+          )}
+        </div>
       )}
     </article>
   );

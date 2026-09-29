@@ -21,5 +21,9 @@ export function serverEnv() {
     supabaseSecret: process.env.SUPABASE_SECRET_KEY ?? process.env.SUPABASE_SERVICE_ROLE_KEY ?? "",
     razorpaySecret: process.env.RAZORPAY_KEY_SECRET ?? "",
     razorpayWebhookSecret: process.env.RAZORPAY_WEBHOOK_SECRET ?? "",
+    smtpHost: process.env.SMTP_HOST || "smtp.hostinger.com",
+    smtpPort: Number(process.env.SMTP_PORT || 465),
+    smtpUser: process.env.SMTP_USER || "community@playnearbygames.com",
+    smtpPassword: process.env.SMTP_PASSWORD ?? process.env.HOSTINGER_SMTP_PASSWORD ?? "",
   };
 }

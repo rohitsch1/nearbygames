@@ -21,7 +21,22 @@ cp .env.example .env.local
 4. **Authentication → Emails → Templates**: paste `supabase/templates/otp.html` into both **Magic Link** and **Confirm signup**. The app verifies a 6-digit code (`{{ .Token }}`), not a link.
 5. **Authentication → URL Configuration**: Site URL = your domain. Add redirect URLs `https://YOUR_DOMAIN/auth/callback` and `http://localhost:3000/auth/callback`.
 6. **Google sign-in**: create an OAuth client in Google Cloud (Web). Authorised redirect URI = `https://<ref>.supabase.co/auth/v1/callback`. Paste the client ID and secret into Supabase → Providers → Google.
-7. **Custom SMTP** (strongly recommended for production): the built-in mailer is rate-limited to a few emails per hour. Brevo and Resend both have free tiers. Set it under Authentication → SMTP.
+7. **Send sign-in codes from Hostinger** (`community@playnearbygames.com`). The built-in mailer only sends a few emails per hour, so production needs this. Under **Authentication → Emails → SMTP Settings**, turn on custom SMTP and enter:
+
+   | Field | Value |
+   |---|---|
+   | Sender email | `community@playnearbygames.com` |
+   | Sender name | `playnearbygames` |
+   | Host | `smtp.hostinger.com` |
+   | Port | `465` (SSL) |
+   | Username | `community@playnearbygames.com` |
+   | Password | the mailbox password from Hostinger hPanel → Emails |
+
+   Then, under **Authentication → Rate Limits**, raise *emails sent per hour* (for example to 60), because the default is very low. Keep it within your Hostinger plan's daily sending limit.
+
+   **Deliverability:** in the DNS for `playnearbygames.com`, make sure the SPF, DKIM and DMARC records that Hostinger shows under hPanel → Emails → *DNS records* are all present and verified. Without them, the codes often land in spam.
+
+   **Local stack:** `supabase/config.toml` uses the same Hostinger settings. Put `HOSTINGER_SMTP_PASSWORD=…` in `.env` or `supabase/.env` (both gitignored) before running `npx supabase start`. Local sign-ins then send real emails instead of going to Mailpit.
 8. Copy the Project URL, the publishable key and the secret key into `.env.local`.
 
 ### 3. Google Maps
@@ -77,7 +92,9 @@ supabase/
 
 - A user's live location **never leaves the device**. It only centres the map and computes distances on the device. The saved neighbourhood is rounded to about 100 m and only its owner can read it (`profile_private`, owner-only RLS).
 - Hosts see a coarse **distance band** ("1–3 km") that is fixed when the request is made. A game's pin can't be moved once anyone has asked or joined, so a host can't triangulate someone's home.
-- Chats are readable only by their two members. A player can't see who else has joined a game unless they are in it (a per-game roster function).
+- Chats are readable only by their two members. A host can open one with a requester before deciding; it is writable only while the request is pending or the player is in (`conversation_status()`), and read-only after a decline or withdrawal.
+- Review rows are readable only by the reviewer and the person reviewed. Everyone else sees them through `user_reviews()`, which leaves out the game so nobody can list the games a person joined.
+- A player can't see who else has joined a game unless they are in it (a per-game roster function).
 - Money moves only inside `SECURITY DEFINER` functions, atomically and with row locks. Payment confirmation is idempotent: a payment is processed only while it is pending.
 - The client can't write `players_count`, `status`, the fee, the host, wallets, payments or participants (column grants plus RLS). EXECUTE on every function is revoked, then granted back per role.
 - Open-redirect-safe `?next=` handling, Razorpay signatures checked with HMAC and a constant-time compare, security headers in `next.config.ts`.

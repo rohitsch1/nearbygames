@@ -94,6 +94,24 @@ export interface HostRequestRow {
   status: RequestStatus;
   created_at: string;
   distance_band: string | null;
+  id_verified: boolean;
+  rating_avg: number | null;
+  rating_count: number;
+  /** Chat with this requester, if the host has opened one (or they're in). */
+  conversation_id: string | null;
+}
+
+/** in = player is in the game, requested = request still pending, closed = read-only. */
+export type ConversationStatus = "in" | "requested" | "closed";
+
+export interface ReviewRow {
+  id: string;
+  rating: number;
+  comment: string | null;
+  created_at: string;
+  reviewer_name: string;
+  reviewer_avatar: string | null;
+  sport: Sport;
 }
 
 export interface Conversation {

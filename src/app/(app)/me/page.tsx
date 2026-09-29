@@ -1,4 +1,4 @@
-import { ChevronRight, LogOut, Pencil, ShieldCheck, Wallet } from "lucide-react";
+import { ChevronRight, LogOut, Pencil, ShieldCheck, Star, Wallet } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -6,12 +6,14 @@ import { MeActions } from "@/components/auth/me-actions";
 import { GameListItem, type GameListItemData } from "@/components/game/game-list-item";
 import { Avatar } from "@/components/ui/avatar";
 import { LinkButton } from "@/components/ui/button";
+import { RatingSummary, Stars } from "@/components/ui/rating";
+import { VerifiedTick } from "@/components/ui/verified-tick";
 import { formatINR } from "@/lib/money";
 import { canTransact, verificationSteps } from "@/lib/profile";
 import { SPORT_BY_ID } from "@/lib/sports";
 import { createClient, getSession } from "@/lib/supabase/server";
 import { timeAgo } from "@/lib/format";
-import type { WalletTx } from "@/lib/types";
+import type { ReviewRow, WalletTx } from "@/lib/types";
 
 export const metadata: Metadata = { title: "Me", robots: { index: false, follow: false } };
 
@@ -21,7 +23,7 @@ export default async function MePage() {
   const p = session.profile;
   const supabase = await createClient();
 
-  const [{ data: stats }, { data: wallet }, { data: txs }, { data: myGames }] = await Promise.all([
+  const [{ data: stats }, { data: wallet }, { data: txs }, { data: myGames }, { data: rating }, { data: reviewRows }] = await Promise.all([
     supabase.rpc("player_stats", { p_user: session.userId }),
     supabase.from("wallets").select("balance_paise").eq("user_id", session.userId).single(),
     supabase.from("wallet_transactions").select("id, amount_paise, kind, description, created_at").order("created_at", { ascending: false }).limit(5),
@@ -31,7 +33,11 @@ export default async function MePage() {
       .eq("user_id", session.userId)
       .order("created_at", { ascending: false })
       .limit(50),
+    supabase.rpc("rating_summary", { p_user: session.userId }),
+    supabase.rpc("user_reviews", { p_user: session.userId, p_limit: 10 }),
   ]);
+  const r = (rating as { rating_avg: number | null; rating_count: number }[] | null)?.[0] ?? { rating_avg: null, rating_count: 0 };
+  const reviews = (reviewRows ?? []) as ReviewRow[];
 
   const s = (stats as { games_played: number; games_hosted: number; no_shows: number }[] | null)?.[0] ?? { games_played: 0, games_hosted: 0, no_shows: 0 };
   const steps = verificationSteps(p, Boolean(session.email || session.phone));
@@ -50,8 +56,12 @@ export default async function MePage() {
             <div className="flex items-center gap-4">
               <Avatar name={p.full_name} src={p.avatar_url} size={72} />
               <div className="min-w-0 flex-1">
-                <h1 className="truncate text-xl font-extrabold">{p.full_name ?? "Guest player"}</h1>
+                <h1 className="flex items-center gap-1.5 text-xl font-extrabold">
+                  <span className="truncate">{p.full_name ?? "Guest player"}</span>
+                  {p.id_verified && <VerifiedTick size={18} />}
+                </h1>
                 <p className="truncate text-sm text-muted">{p.area_name ?? "Add your area"}</p>
+                <RatingSummary avg={r.rating_avg} count={r.rating_count} />
               </div>
               <Link href="/me/edit" aria-label="Edit profile" className="flex size-10 items-center justify-center rounded-full bg-surface-2 hover:bg-line">
                 <Pencil className="size-4" />
@@ -147,6 +157,31 @@ export default async function MePage() {
                 </span>
               )) : <p className="text-sm text-muted">None picked yet.</p>}
             </div>
+          </section>
+
+          <section>
+            <h2 className="mb-3 flex items-center gap-2 text-lg font-bold"><Star className="size-5 fill-amber-400 text-amber-400" aria-hidden /> Reviews about you</h2>
+            {reviews.length ? (
+              <ul className="space-y-2">
+                {reviews.map((rv) => (
+                  <li key={rv.id} className="rounded-2xl border border-line bg-surface p-4">
+                    <div className="flex items-center gap-3">
+                      <Avatar name={rv.reviewer_name} src={rv.reviewer_avatar} size={36} />
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-semibold">{rv.reviewer_name} <span className="font-normal text-muted">· {SPORT_BY_ID[rv.sport].emoji} {SPORT_BY_ID[rv.sport].label}</span></p>
+                        <Stars value={rv.rating} />
+                      </div>
+                      <span className="shrink-0 text-xs text-subtle">{timeAgo(rv.created_at)}</span>
+                    </div>
+                    {rv.comment && <p className="mt-2 text-sm">{rv.comment}</p>}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="rounded-2xl border border-dashed border-line p-6 text-center text-sm text-muted">
+                No reviews yet. After a game, the people you played with can rate you.
+              </p>
+            )}
           </section>
 
           <section className="space-y-2">

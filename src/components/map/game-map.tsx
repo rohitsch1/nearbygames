@@ -9,7 +9,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { GameListItem } from "@/components/game/game-list-item";
 import { EmptyState } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
-import { usePendingRequests } from "@/hooks/use-pending-requests";
+import { useNavBadge } from "@/hooks/use-nav-badge";
 import { useUserLocation } from "@/hooks/use-user-location";
 import { env } from "@/lib/env";
 import { formatStartsIn } from "@/lib/format";
@@ -18,7 +18,7 @@ import { SPORTS, SPORT_BY_ID } from "@/lib/sports";
 import { createClient } from "@/lib/supabase/client";
 import type { NearbyGame, Sport } from "@/lib/types";
 import { GameMarker, UserDot } from "./game-marker";
-import { hasMapsKey, MapsProvider, useReverseGeocode } from "./maps-provider";
+import { hasMapsKey, MapBoundary, MapsProvider, useMapsAvailable, useReverseGeocode } from "./maps-provider";
 import { PlaceSearch } from "./place-search";
 import { SchematicMap } from "./schematic-map";
 
@@ -42,7 +42,8 @@ export function GameMap(props: Props) {
 function GameMapInner({ userId, home, areaName, favouriteSports }: Props) {
   const router = useRouter();
   const reverseGeocode = useReverseGeocode();
-  const pending = usePendingRequests(userId);
+  const { count: pending, markSeen: seenRequests } = useNavBadge(userId, "requests");
+  const mapsOn = useMapsAvailable();
 
   const initialCenter = home ?? DEFAULT_CENTER;
   const [query, setQuery] = useState<{ center: LatLng; radius: number }>({ center: initialCenter, radius: 15000 });
@@ -60,7 +61,7 @@ function GameMapInner({ userId, home, areaName, favouriteSports }: Props) {
   const { position, status, locate } = useUserLocation((p) => {
     // First live fix: fly there (and, without a map, search around it).
     setFlyTo(p);
-    if (!hasMapsKey) setQuery((q) => ({ ...q, center: p }));
+    if (!mapsOn) setQuery((q) => ({ ...q, center: p }));
   });
 
   // Fetch games for the visible area.
@@ -113,7 +114,7 @@ function GameMapInner({ userId, home, areaName, favouriteSports }: Props) {
     const target = position ?? (await locate()) ?? home;
     if (!target) return;
     setFlyTo({ ...target });
-    if (!hasMapsKey) setQuery((q) => ({ ...q, center: target }));
+    if (!mapsOn) setQuery((q) => ({ ...q, center: target }));
   };
 
   const openGame = useCallback((g: NearbyGame) => router.push(`/games/${g.slug}`), [router]);
@@ -170,6 +171,11 @@ function GameMapInner({ userId, home, areaName, favouriteSports }: Props) {
     </p>
   );
 
+  const preview = (
+    <SchematicMap games={withDistance} center={query.center} user={position} nearestId={nearestId}
+      highlight={highlight} onOpen={openGame} onHover={setHighlight} />
+  );
+
   return (
     <div className="flex h-[calc(100dvh-4rem-env(safe-area-inset-bottom))] md:h-dvh">
       {/* Side panel (tablet/desktop) */}
@@ -184,36 +190,40 @@ function GameMapInner({ userId, home, areaName, favouriteSports }: Props) {
 
       {/* Map */}
       <div className="relative flex-1">
-        {hasMapsKey ? (
-          <GoogleMap
-            defaultCenter={initialCenter}
-            defaultZoom={13}
-            mapId={env.googleMapsMapId}
-            gestureHandling="greedy"
-            disableDefaultUI
-            clickableIcons={false}
-            reuseMaps
-            className="size-full"
-            onIdle={(e) => {
-              const c = e.map.getCenter();
-              const ne = e.map.getBounds()?.getNorthEast();
-              if (c) void onCameraIdle({ lat: c.lat(), lng: c.lng() }, ne ? { lat: ne.lat(), lng: ne.lng() } : null);
-            }}
-          >
-            <FlyTo target={flyTo} />
-            {withDistance.map((g) => (
-              <GameMarker key={g.id} game={g} nearest={g.id === nearestId} highlighted={highlight === g.id}
-                onClick={openGame} onHover={setHighlight} />
-            ))}
-            {position && (
-              <AdvancedMarker position={position} zIndex={2000} title="You">
-                <UserDot />
-              </AdvancedMarker>
-            )}
-          </GoogleMap>
-        ) : (
-          <SchematicMap games={withDistance} center={query.center} user={position} nearestId={nearestId}
-            highlight={highlight} onOpen={openGame} onHover={setHighlight} />
+        {mapsOn ? (
+          <MapBoundary fallback={preview}>
+            <GoogleMap
+              defaultCenter={initialCenter}
+              defaultZoom={13}
+              mapId={env.googleMapsMapId}
+              gestureHandling="greedy"
+              disableDefaultUI
+              clickableIcons={false}
+              reuseMaps
+              className="size-full"
+              onIdle={(e) => {
+                const c = e.map.getCenter();
+                const ne = e.map.getBounds()?.getNorthEast();
+                if (c) void onCameraIdle({ lat: c.lat(), lng: c.lng() }, ne ? { lat: ne.lat(), lng: ne.lng() } : null);
+              }}
+            >
+              <FlyTo target={flyTo} />
+              {withDistance.map((g) => (
+                <GameMarker key={g.id} game={g} nearest={g.id === nearestId} highlighted={highlight === g.id}
+                  onClick={openGame} onHover={setHighlight} />
+              ))}
+              {position && (
+                <AdvancedMarker position={position} zIndex={2000} title="You">
+                  <UserDot />
+                </AdvancedMarker>
+              )}
+            </GoogleMap>
+          </MapBoundary>
+        ) : preview}
+        {hasMapsKey && !mapsOn && (
+          <p className="pointer-events-none absolute inset-x-0 top-36 z-10 mx-auto w-fit rounded-full bg-surface/90 px-3 py-1 text-xs font-semibold text-muted shadow-card md:top-4">
+            Google Maps is unavailable · showing a preview map
+          </p>
         )}
 
         {/* Mobile list view replaces the map */}
@@ -224,12 +234,12 @@ function GameMapInner({ userId, home, areaName, favouriteSports }: Props) {
         {/* Top overlay (mobile) */}
         <div className="pointer-events-none absolute inset-x-0 top-0 z-20 space-y-2 p-3 pt-[max(env(safe-area-inset-top),12px)] md:hidden">
           <div className="pointer-events-auto flex items-center gap-2">
-            {hasMapsKey ? (
+            {mapsOn ? (
               <PlaceSearch label={label} onPick={(p, name) => { setFlyTo(p); setLabel(name); lastGeocoded.current = p; }} />
             ) : (
               <div className="flex h-12 flex-1 items-center rounded-2xl bg-surface px-4 font-semibold shadow-float">{label}</div>
             )}
-            <Link href={userId ? "/requests" : "/sign-in?next=/requests"} aria-label={`Requests${pending ? `, ${pending} waiting` : ""}`}
+            <Link href={userId ? "/requests" : "/sign-in?next=/requests"} onClick={seenRequests} aria-label={`Requests${pending ? `, ${pending} new` : ""}`}
               className="relative flex size-12 shrink-0 items-center justify-center rounded-2xl bg-surface shadow-float">
               <Bell className="size-5" />
               {pending > 0 && (
@@ -241,7 +251,7 @@ function GameMapInner({ userId, home, areaName, favouriteSports }: Props) {
         </div>
 
         {/* Desktop search */}
-        {hasMapsKey && (
+        {mapsOn && (
           <div className="absolute left-4 right-4 top-4 z-20 hidden max-w-md md:flex">
             <PlaceSearch label={label} onPick={(p, name) => { setFlyTo(p); setLabel(name); lastGeocoded.current = p; }} />
           </div>

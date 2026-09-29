@@ -8,10 +8,13 @@ import { GameActions } from "@/components/game/game-actions";
 import { GameLocationMap } from "@/components/game/game-location-map";
 import { HostTools } from "@/components/game/host-tools";
 import { JsonLd } from "@/components/game/json-ld";
+import { ReviewPanel, type ExistingReview } from "@/components/game/review-panel";
 import { ShareButton } from "@/components/game/share-button";
 import { Avatar, AvatarStack } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/ui/page-header";
+import { RatingSummary } from "@/components/ui/rating";
+import { VerifiedTick } from "@/components/ui/verified-tick";
 import { formatFullDate, formatWhen, firstName } from "@/lib/format";
 import { googleMapsDirectionsUrl } from "@/lib/geo";
 import { formatINR, platformFee } from "@/lib/money";
@@ -51,17 +54,31 @@ export default async function GamePage({ params }: PageProps<"/games/[slug]">) {
 
   const session = await getSession();
   const { state, participants, pendingCount } = await getViewerState(game, session?.userId ?? null, canTransact(session?.profile));
-  let home: { lat: number; lng: number } | null = null;
-  if (session) {
-    const supabase = await createClient();
-    const { data } = await supabase.rpc("my_home_location");
-    home = (data as { lat: number; lng: number }[] | null)?.[0] ?? null;
-  }
+  const supabase = await createClient();
+  const now = new Date();
+  const started = new Date(game.starts_at) < now;
+  const endsAtMs = new Date(game.starts_at).getTime() + game.duration_minutes * 60_000;
+  // Same window the database enforces in submit_review().
+  const canReview = Boolean(session) && (state.kind === "host" || state.kind === "in") && started
+    && game.status !== "cancelled" && endsAtMs > now.getTime() - 86400_000;
+
+  const [homeRes, hostRatingRes, myReviewsRes] = await Promise.all([
+    session ? supabase.rpc("my_home_location") : null,
+    supabase.rpc("rating_summary", { p_user: game.host_id }),
+    canReview
+      ? supabase.from("reviews").select("reviewee_id, rating, comment").eq("game_id", game.id).eq("reviewer_id", session!.userId)
+      : null,
+  ]);
+  const home = (homeRes?.data as { lat: number; lng: number }[] | null)?.[0] ?? null;
+  const hostRating = (hostRatingRes.data as { rating_avg: number | null; rating_count: number }[] | null)?.[0] ?? { rating_avg: null, rating_count: 0 };
+  const myReviews: Record<string, ExistingReview> = Object.fromEntries(
+    ((myReviewsRes?.data ?? []) as { reviewee_id: string; rating: number; comment: string | null }[])
+      .map((r) => [r.reviewee_id, { rating: r.rating, comment: r.comment }]),
+  );
 
   const sport = SPORT_BY_ID[game.sport];
   const spots = Math.max(game.capacity - game.players_count, 0);
-  const endsAt = new Date(new Date(game.starts_at).getTime() + game.duration_minutes * 60_000);
-  const started = new Date(game.starts_at) < new Date();
+  const endsAt = new Date(endsAtMs);
   const fee = game.is_paid ? platformFee(game.fee_paise) : 0;
 
   const jsonLd = {
@@ -150,7 +167,11 @@ export default async function GamePage({ params }: PageProps<"/games/[slug]">) {
               <Avatar name={game.host.full_name} src={game.host.avatar_url} size={48} />
               <div className="min-w-0 flex-1">
                 <p className="text-xs font-semibold uppercase tracking-wider text-subtle">Hosted by</p>
-                <p className="truncate font-bold">{game.host.full_name ?? "A nearbygames player"}</p>
+                <p className="flex items-center gap-1.5 font-bold">
+                  <span className="truncate">{game.host.full_name ?? "A nearbygames player"}</span>
+                  {game.host.id_verified && <VerifiedTick />}
+                </p>
+                <RatingSummary avg={hostRating.rating_avg} count={hostRating.rating_count} />
                 {game.host.area_name && <p className="truncate text-sm text-muted">{game.host.area_name}</p>}
               </div>
             </div>
@@ -176,6 +197,13 @@ export default async function GamePage({ params }: PageProps<"/games/[slug]">) {
             </div>
             <GameLocationMap lat={game.lat} lng={game.lng} sport={game.sport} />
           </section>
+
+          {canReview && (
+            <ReviewPanel gameId={game.id} existing={myReviews}
+              people={participants.filter((p) => p.user_id !== session!.userId).map((p) => ({
+                userId: p.user_id, name: p.profile.full_name, avatar: p.profile.avatar_url, isHost: p.user_id === game.host_id,
+              }))} />
+          )}
 
           {state.kind === "host" && (
             <HostTools gameId={game.id} started={started} cancelled={game.status === "cancelled"}

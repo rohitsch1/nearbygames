@@ -53,6 +53,11 @@ export function MyRequestCard({ request: r }: { request: MyRequestRow }) {
           <Button size="sm" variant="ghost" loading={pending} onClick={withdraw}>Withdraw</Button>
         </div>
       )}
+      {r.status === "pending" && r.conversationId && (
+        <LinkButton href={`/messages/${r.conversationId}`} size="sm" variant="secondary" className="mt-2 w-full" icon={<MessageCircle className="size-4" />}>
+          Chat with {host}
+        </LinkButton>
+      )}
       {r.status === "accepted" && r.conversationId && (
         <LinkButton href={`/messages/${r.conversationId}`} size="sm" className="mt-3 w-full" icon={<MessageCircle className="size-4" />}>
           Open chat with {host}

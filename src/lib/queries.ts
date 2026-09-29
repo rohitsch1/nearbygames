@@ -5,7 +5,7 @@ import { isSupabaseConfigured } from "@/lib/env";
 import { createClient, createPublicClient } from "@/lib/supabase/server";
 import type { Game, JoinRequest, PublicProfile } from "@/lib/types";
 
-export type GameWithHost = Game & { host: PublicProfile };
+export type GameWithHost = Game & { host: PublicProfile & { id_verified: boolean } };
 
 /** Public game lookup (no auth needed) — used by the page and generateMetadata; deduped per request. */
 export const getGameBySlug = cache(async (slug: string): Promise<GameWithHost | null> => {
@@ -13,7 +13,7 @@ export const getGameBySlug = cache(async (slug: string): Promise<GameWithHost | 
   const supabase = createPublicClient();
   const { data } = await supabase
     .from("games")
-    .select("*, host:profiles!games_host_id_fkey(id, full_name, avatar_url, area_name)")
+    .select("*, host:profiles!games_host_id_fkey(id, full_name, avatar_url, area_name, id_verified)")
     .eq("slug", slug)
     .maybeSingle();
   return (data as GameWithHost | null) ?? null;

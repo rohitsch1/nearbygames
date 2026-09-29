@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { ChatView } from "@/components/chat/chat-view";
 import { createClient, getSession } from "@/lib/supabase/server";
-import type { Message, Sport } from "@/lib/types";
+import type { ConversationStatus, Message, Sport } from "@/lib/types";
 
 export const metadata: Metadata = { title: "Chat", robots: { index: false, follow: false } };
 
@@ -29,8 +29,9 @@ export default async function ConversationPage({ params }: PageProps<"/messages/
     host: Person; player: Person;
   };
 
-  const [{ data: msgs }] = await Promise.all([
+  const [{ data: msgs }, { data: status }] = await Promise.all([
     supabase.from("messages").select("*").eq("conversation_id", id).order("created_at", { ascending: false }).limit(50),
+    supabase.rpc("conversation_status", { p_conv: id }),
     supabase.from("notifications").update({ read_at: new Date().toISOString() })
       .eq("user_id", session.userId).eq("kind", "message").eq("link", `/messages/${id}`).is("read_at", null),
   ]);
@@ -42,6 +43,7 @@ export default async function ConversationPage({ params }: PageProps<"/messages/
       me={session.userId}
       other={iAmHost ? c.player : c.host}
       otherRole={iAmHost ? "player" : "host"}
+      status={(status as ConversationStatus | null) ?? "closed"}
       game={c.game}
       initialMessages={((msgs ?? []) as Message[]).reverse()}
     />

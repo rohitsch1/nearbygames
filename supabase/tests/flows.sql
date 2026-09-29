@@ -235,4 +235,144 @@ do $$ begin
   assert (select balance_paise from public.wallets where user_id = '00000000-0000-0000-0000-00000000000a') = 0, 'host earning reversed';
 end $$;
 
+-- ---------------------------------------------------------------- chat with a requester
+select pg_temp.as_user('00000000-0000-0000-0000-00000000000a');
+insert into public.games (host_id, sport, spot_name, city, lat, lng, starts_at, capacity)
+values ('00000000-0000-0000-0000-00000000000a', 'badminton', 'Terrace Court', 'Bengaluru', 12.912, 77.646, now() + interval '1 day', 4);
+reset role;
+select pg_temp.as_user('00000000-0000-0000-0000-00000000000d');
+select public.request_to_join((select id from public.games where spot_name = 'Terrace Court'), 'Beginner, is that ok?');
+reset role;
+select id as terrace_rid from public.join_requests
+ where requester_id = '00000000-0000-0000-0000-00000000000d' and status = 'pending' \gset
+
+-- Only the host can open it
+select pg_temp.as_user('00000000-0000-0000-0000-00000000000b');
+select pg_temp.expect_error(format('select public.open_request_chat(%L)', :'terrace_rid'), 'Only the host');
+reset role;
+
+select pg_temp.as_user('00000000-0000-0000-0000-00000000000a');
+select public.open_request_chat(:'terrace_rid') as terrace_conv \gset
+select public.open_request_chat(:'terrace_rid') as terrace_conv_again \gset
+reset role;
+-- psql vars don't reach inside $$ blocks, so stash them in a temp table first
+create temp table t_conv as select :'terrace_conv'::uuid as first, :'terrace_conv_again'::uuid as again;
+do $$ begin
+  assert (select first = again from t_conv), 'opening twice returns the same chat';
+end $$;
+
+-- The requester can read and reply while the request is pending
+select pg_temp.as_user('00000000-0000-0000-0000-00000000000d');
+do $$ begin
+  assert (select count(*) from public.conversations) = 1, 'requester sees the chat';
+  assert public.conversation_status((select id from public.conversations limit 1)) = 'requested', 'status requested';
+end $$;
+insert into public.messages (conversation_id, sender_id, body, client_id)
+values (:'terrace_conv', '00000000-0000-0000-0000-00000000000d', 'Happy to learn!', gen_random_uuid());
+reset role;
+
+-- host_requests carries the chat id, ID check and rating
+select pg_temp.as_user('00000000-0000-0000-0000-00000000000a');
+do $$
+declare r record;
+begin
+  select * into r from public.host_requests() where spot_name = 'Terrace Court';
+  assert r.conversation_id is not null, 'host sees chat id on the request';
+  assert r.id_verified = false, 'id tick comes from the profile';
+  assert r.rating_count = 0 and r.rating_avg is null, 'no reviews yet';
+end $$;
+select public.decline_request(:'terrace_rid', null);
+reset role;
+
+-- After a decline the chat is read-only
+select pg_temp.as_user('00000000-0000-0000-0000-00000000000d');
+do $$ begin
+  assert public.conversation_status((select id from public.conversations limit 1)) = 'closed', 'closed after decline';
+end $$;
+select pg_temp.expect_error(format(
+  'insert into public.messages (conversation_id, sender_id, body) values (%L, %L, %L)',
+  :'terrace_conv', '00000000-0000-0000-0000-00000000000d', 'please?'), 'row-level security');
+reset role;
+-- Outsiders get no status at all
+select pg_temp.as_user('00000000-0000-0000-0000-00000000000b');
+do $$ begin
+  assert public.conversation_status((select c.id from public.conversations c join public.games g on g.id = c.game_id where g.spot_name = 'Terrace Court')) is null;
+end $$;
+reset role;
+
+-- ---------------------------------------------------------------- reviews (HSR Turf: A hosts, B and C played)
+select pg_temp.as_user('00000000-0000-0000-0000-00000000000b');
+select pg_temp.expect_error($q$
+  select public.submit_review((select id from public.games where spot_name = 'HSR Turf'), '00000000-0000-0000-0000-00000000000a', 5, null)
+$q$, 'once the game has started');
+reset role;
+update public.games set starts_at = now() - interval '1 hour' where spot_name = 'HSR Turf';
+
+select pg_temp.as_user('00000000-0000-0000-0000-00000000000b');
+select public.submit_review((select id from public.games where spot_name = 'HSR Turf'), '00000000-0000-0000-0000-00000000000a', 5, 'Great host');
+select public.submit_review((select id from public.games where spot_name = 'HSR Turf'), '00000000-0000-0000-0000-00000000000a', 4, 'Great host, started late');
+select pg_temp.expect_error($q$
+  select public.submit_review((select id from public.games where spot_name = 'HSR Turf'), '00000000-0000-0000-0000-00000000000b', 5, null)
+$q$, 'yourself');
+select pg_temp.expect_error($q$
+  select public.submit_review((select id from public.games where spot_name = 'HSR Turf'), '00000000-0000-0000-0000-00000000000d', 1, null)
+$q$, 'played with you');
+select pg_temp.expect_error($q$
+  select public.submit_review((select id from public.games where spot_name = 'HSR Turf'), '00000000-0000-0000-0000-00000000000a', 9, null)
+$q$, '1 to 5');
+select pg_temp.expect_error($q$
+  insert into public.reviews (game_id, reviewer_id, reviewee_id, rating)
+  values ((select id from public.games where spot_name = 'HSR Turf'), '00000000-0000-0000-0000-00000000000b', '00000000-0000-0000-0000-00000000000a', 5)
+$q$, 'permission denied');
+reset role;
+select pg_temp.as_user('00000000-0000-0000-0000-00000000000c');
+select public.submit_review((select id from public.games where spot_name = 'HSR Turf'), '00000000-0000-0000-0000-00000000000a', 5, null);
+select public.submit_review((select id from public.games where spot_name = 'HSR Turf'), '00000000-0000-0000-0000-00000000000b', 3, 'Solid keeper');
+reset role;
+
+-- D was declined, so can't review anyone from that game
+select pg_temp.as_user('00000000-0000-0000-0000-00000000000d');
+select pg_temp.expect_error($q$
+  select public.submit_review((select id from public.games where spot_name = 'HSR Turf'), '00000000-0000-0000-0000-00000000000a', 1, null)
+$q$, 'Only people who played');
+do $$
+declare s record;
+begin
+  assert (select count(*) from public.reviews) = 0, 'outsider reads no review rows';
+  select * into s from public.rating_summary('00000000-0000-0000-0000-00000000000a');
+  assert s.rating_count = 2 and s.rating_avg = 4.5, 'summary ' || s.rating_count || ' / ' || coalesce(s.rating_avg::text, 'null');
+  assert (select count(*) from public.user_reviews('00000000-0000-0000-0000-00000000000a')) = 2, 'public review list';
+end $$;
+reset role;
+do $$ begin
+  assert (select count(*) from public.notifications where kind = 'review_received' and user_id = '00000000-0000-0000-0000-00000000000a') = 2,
+    'host notified once per reviewer, not on edits';
+end $$;
+set role anon;
+select pg_temp.expect_error($q$ select * from public.user_reviews('00000000-0000-0000-0000-00000000000a') $q$, 'permission denied');
+reset role;
+
+-- No-shows didn't play: they can't give or get reviews for that game
+select pg_temp.as_user('00000000-0000-0000-0000-00000000000a');
+select public.set_no_show((select id from public.games where spot_name = 'HSR Turf'), '00000000-0000-0000-0000-00000000000c', true);
+reset role;
+select pg_temp.as_user('00000000-0000-0000-0000-00000000000b');
+select pg_temp.expect_error($q$
+  select public.submit_review((select id from public.games where spot_name = 'HSR Turf'), '00000000-0000-0000-0000-00000000000c', 2, null)
+$q$, 'played with you');
+reset role;
+select pg_temp.as_user('00000000-0000-0000-0000-00000000000c');
+select pg_temp.expect_error($q$
+  select public.submit_review((select id from public.games where spot_name = 'HSR Turf'), '00000000-0000-0000-0000-00000000000b', 5, null)
+$q$, 'Only people who played');
+reset role;
+
+-- Reviews close 24 hours after the game ends
+update public.games set starts_at = now() - interval '3 days' where spot_name = 'HSR Turf';
+select pg_temp.as_user('00000000-0000-0000-0000-00000000000b');
+select pg_temp.expect_error($q$
+  select public.submit_review((select id from public.games where spot_name = 'HSR Turf'), '00000000-0000-0000-0000-00000000000a', 3, null)
+$q$, '24 hours');
+reset role;
+
 \echo 'ALL DATABASE TESTS PASSED'

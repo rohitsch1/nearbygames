@@ -41,7 +41,9 @@ export function NotificationListener({ userId }: { userId: string }) {
               action: n.link ? { label: "Open", onClick: () => router.push(n.link!) } : undefined,
             });
           }
-          if (n.kind !== "message") router.refresh();
+          // Re-render server data that this ping changes. For messages that's only the
+          // conversation list (an open chat already gets the message over its own channel).
+          if (n.kind !== "message" || window.location.pathname === "/messages") router.refresh();
         },
       )
       .subscribe();

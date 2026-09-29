@@ -1,7 +1,7 @@
 "use client";
 
 import { clsx } from "clsx";
-import { AlertCircle, ChevronLeft, SendHorizontal } from "lucide-react";
+import { AlertCircle, ChevronLeft, Hourglass, Lock, SendHorizontal } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Avatar } from "@/components/ui/avatar";
@@ -9,7 +9,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { APP_TIMEZONE, formatWhen } from "@/lib/format";
 import { SPORT_BY_ID } from "@/lib/sports";
 import { createClient } from "@/lib/supabase/client";
-import type { Message, Sport } from "@/lib/types";
+import type { ConversationStatus, Message, Sport } from "@/lib/types";
 
 type Person = { id: string; full_name: string | null; avatar_url: string | null };
 type LocalMessage = Message & { pending?: boolean; failed?: boolean };
@@ -19,6 +19,8 @@ interface Props {
   me: string;
   other: Person;
   otherRole: "host" | "player";
+  /** Chat about a pending request, a chat between people in the game, or a read-only one. */
+  status: ConversationStatus;
   game: { slug: string; sport: Sport; spot_name: string; starts_at: string; status: string };
   initialMessages: Message[];
 }
@@ -27,7 +29,7 @@ const timeFmt = new Intl.DateTimeFormat("en-IN", { hour: "numeric", minute: "2-d
 const dayFmt = new Intl.DateTimeFormat("en-IN", { weekday: "long", day: "numeric", month: "short", timeZone: APP_TIMEZONE });
 const dayKey = (iso: string) => new Intl.DateTimeFormat("en-CA", { timeZone: APP_TIMEZONE }).format(new Date(iso));
 
-export function ChatView({ conversationId, me, other, otherRole, game, initialMessages }: Props) {
+export function ChatView({ conversationId, me, other, otherRole, status, game, initialMessages }: Props) {
   const [messages, setMessages] = useState<LocalMessage[]>(initialMessages);
   const [text, setText] = useState("");
   const [hasMore, setHasMore] = useState(initialMessages.length === 50);
@@ -141,6 +143,14 @@ export function ChatView({ conversationId, me, other, otherRole, game, initialMe
         <span className="truncate font-semibold">{game.spot_name} · {formatWhen(game.starts_at)}</span>
         {game.status === "cancelled" && <span className="ml-auto shrink-0 font-bold text-danger">Cancelled</span>}
       </Link>
+      {status === "requested" && (
+        <p className="flex items-center gap-2 border-b border-line bg-info-soft px-4 py-2 text-sm text-info md:px-6">
+          <Hourglass className="size-4 shrink-0" aria-hidden />
+          {otherRole === "host"
+            ? `Your request is still waiting. ${other.full_name?.split(" ")[0] ?? "The host"} wanted to chat first.`
+            : <>Not in your game yet. <Link href="/requests?tab=hosting" className="font-semibold underline">Accept or decline</Link> when you&apos;re ready.</>}
+        </p>
+      )}
 
       <div ref={scroller} className="flex-1 overflow-y-auto px-3 py-4 md:px-6"
         onScroll={(e) => {
@@ -157,7 +167,11 @@ export function ChatView({ conversationId, me, other, otherRole, game, initialMe
             </div>
           )}
           {messages.length === 0 && (
-            <p className="py-10 text-center text-sm text-muted">You&apos;re both in. Say hi and sort out the details 👋</p>
+            <p className="py-10 text-center text-sm text-muted">
+              {status === "requested"
+                ? otherRole === "player" ? "Ask them anything before you decide 👋" : "Say hi and tell them a bit about yourself 👋"
+                : "You're both in. Say hi and sort out the details 👋"}
+            </p>
           )}
           {messages.map((m, i) => {
             const mine = m.sender_id === me;
@@ -188,19 +202,25 @@ export function ChatView({ conversationId, me, other, otherRole, game, initialMe
         </div>
       </div>
 
-      <form onSubmit={onSubmit} className="pb-safe border-t border-line bg-surface px-3 py-2 md:px-6">
-        <div className="mx-auto flex max-w-3xl items-end gap-2">
-          <label htmlFor="msg" className="sr-only">Message</label>
-          <textarea id="msg" ref={inputRef} value={text} onChange={(e) => setText(e.target.value)} rows={1} maxLength={2000}
-            placeholder="Message" enterKeyHint="send"
-            onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); onSubmit(e); } }}
-            className="max-h-32 min-h-11 flex-1 resize-none rounded-2xl border border-line bg-surface-2 px-4 py-2.5 text-[15px] outline-none focus:border-brand" />
-          <button type="submit" disabled={!text.trim()} aria-label="Send"
-            className="flex size-11 shrink-0 items-center justify-center rounded-full bg-brand text-white transition disabled:opacity-40 dark:text-[#052e1a]">
-            <SendHorizontal className="size-5" />
-          </button>
-        </div>
-      </form>
+      {status === "closed" ? (
+        <p className="pb-safe flex items-center justify-center gap-2 border-t border-line bg-surface px-4 py-4 text-sm text-muted">
+          <Lock className="size-4" aria-hidden /> This chat is closed because the request was declined or withdrawn.
+        </p>
+      ) : (
+        <form onSubmit={onSubmit} className="pb-safe border-t border-line bg-surface px-3 py-2 md:px-6">
+          <div className="mx-auto flex max-w-3xl items-end gap-2">
+            <label htmlFor="msg" className="sr-only">Message</label>
+            <textarea id="msg" ref={inputRef} value={text} onChange={(e) => setText(e.target.value)} rows={1} maxLength={2000}
+              placeholder="Message" enterKeyHint="send"
+              onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); onSubmit(e); } }}
+              className="max-h-32 min-h-11 flex-1 resize-none rounded-2xl border border-line bg-surface-2 px-4 py-2.5 text-[15px] outline-none focus:border-brand" />
+            <button type="submit" disabled={!text.trim()} aria-label="Send"
+              className="flex size-11 shrink-0 items-center justify-center rounded-full bg-brand text-white transition disabled:opacity-40 dark:text-[#052e1a]">
+              <SendHorizontal className="size-5" />
+            </button>
+          </div>
+        </form>
+      )}
     </div>
   );
 }

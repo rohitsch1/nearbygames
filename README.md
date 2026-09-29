@@ -139,7 +139,9 @@ Chess, basketball, tennis, table tennis, pickleball, running and "anything else"
 - **Your live location never leaves your phone.** Other players only see a rounded distance. Your saved neighbourhood is rounded to about 100 m and only you can read it.
 - Hosts see a **coarse distance band** ("1–3 km"), fixed when the request is made. A game's pin **can't be moved** once someone has asked or joined, so nobody can work out where a player lives.
 - **Hosting at home?** Drop the pin at your lane or a landmark and share the exact house in chat after you accept someone.
-- A **chat only exists once you're in the game**; until then it shows as a locked row.
+- A **chat opens once you're in the game**, or earlier if the host wants to talk to you about your request first. If the request is declined or withdrawn, that chat becomes read-only.
+- **Ratings and reviews**: after a game starts, the people who played can rate each other from 1 to 5 stars. Reviews show on profiles and request cards but never say which game they came from.
+- **Email updates**: hosts get an email for every new request (with the player's rating and a blue tick if their ID is verified), and players get an email when they're accepted or declined.
 
 **Built to be found**
 - Public, server-rendered pages for every game (with event structured data and a share image), plus pages for each sport and each sport in each city (e.g. `/play/cricket/hisar`), a sitemap and robots rules.

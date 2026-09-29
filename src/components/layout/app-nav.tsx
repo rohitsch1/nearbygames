@@ -5,27 +5,26 @@ import { Bell, Map, MessageCircle, Plus, User, LogIn } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LogoMark } from "./logo";
-import { usePendingRequests } from "@/hooks/use-pending-requests";
+import { useNavBadge, type BadgeKind } from "@/hooks/use-nav-badge";
 import { Avatar } from "@/components/ui/avatar";
 
 interface Props {
   userId: string | null;
   name: string | null;
   avatarUrl: string | null;
-  initialPending: number;
 }
 
 const items = [
   { href: "/map", label: "Map", icon: Map, match: /^\/(map|games)/ },
-  { href: "/requests", label: "Requests", icon: Bell, match: /^\/requests/, badge: true },
+  { href: "/requests", label: "Requests", icon: Bell, match: /^\/requests/, badge: "requests" as BadgeKind },
   { href: "/host/new", label: "Start a game", short: "Host", icon: Plus, match: /^\/host/, primary: true },
-  { href: "/messages", label: "Messages", icon: MessageCircle, match: /^\/messages/ },
+  { href: "/messages", label: "Messages", icon: MessageCircle, match: /^\/messages/, badge: "messages" as BadgeKind },
   { href: "/me", label: "Me", icon: User, match: /^\/me/ },
 ];
 
-export function AppNav({ userId, name, avatarUrl, initialPending }: Props) {
+export function AppNav({ userId, name, avatarUrl }: Props) {
   const pathname = usePathname();
-  const pending = usePendingRequests(userId, initialPending);
+  const badges = { requests: useNavBadge(userId, "requests"), messages: useNavBadge(userId, "messages") };
   const hideOnMobile = /^\/messages\/[^/]+/.test(pathname) || /^\/onboarding/.test(pathname);
 
   return (
@@ -40,8 +39,10 @@ export function AppNav({ userId, name, avatarUrl, initialPending }: Props) {
           const active = it.match.test(pathname);
           const Icon = it.icon;
           if (!userId && it.href !== "/map") return null;
+          const badge = it.badge ? badges[it.badge] : null;
           return (
-            <Link key={it.href} href={it.href} aria-current={active ? "page" : undefined}
+            <Link key={it.href} href={it.href} aria-current={active ? "page" : undefined} onClick={badge?.markSeen}
+              aria-label={badge?.count ? `${it.label}, ${badge.count} new` : undefined}
               className={clsx(
                 "group relative flex h-12 items-center gap-3 rounded-xl px-3 text-[15px] font-semibold transition",
                 it.primary ? "my-2 bg-brand text-white hover:brightness-105 dark:text-[#052e1a]" :
@@ -49,9 +50,9 @@ export function AppNav({ userId, name, avatarUrl, initialPending }: Props) {
               )}>
               <Icon className="size-5 shrink-0" />
               <span className="hidden lg:inline">{it.label}</span>
-              {it.badge && pending > 0 && (
+              {badge && badge.count > 0 && (
                 <span className="absolute left-7 top-2 min-w-5 rounded-full bg-danger px-1.5 text-center text-[11px] font-bold leading-5 text-white lg:static lg:ml-auto">
-                  {pending > 99 ? "99+" : pending}
+                  {badge.count > 99 ? "99+" : badge.count}
                 </span>
               )}
             </Link>
@@ -79,9 +80,11 @@ export function AppNav({ userId, name, avatarUrl, initialPending }: Props) {
               const active = it.match.test(pathname);
               const Icon = it.icon;
               const href = !userId && it.href !== "/map" ? `/sign-in?next=${encodeURIComponent(it.href)}` : it.href;
+              const badge = it.badge && userId ? badges[it.badge] : null;
               return (
                 <li key={it.href}>
-                  <Link href={href} aria-current={active ? "page" : undefined}
+                  <Link href={href} aria-current={active ? "page" : undefined} onClick={badge?.markSeen}
+                    aria-label={badge?.count ? `${it.short ?? it.label}, ${badge.count} new` : undefined}
                     className={clsx("relative flex h-full flex-col items-center justify-center gap-0.5 text-[11px] font-semibold",
                       active ? "text-brand-strong" : "text-subtle")}>
                     {it.primary ? (
@@ -92,9 +95,9 @@ export function AppNav({ userId, name, avatarUrl, initialPending }: Props) {
                       <Icon className="size-[22px]" strokeWidth={active ? 2.5 : 2} />
                     )}
                     <span>{it.short ?? it.label}</span>
-                    {it.badge && pending > 0 && (
+                    {badge && badge.count > 0 && (
                       <span className="absolute left-1/2 top-1.5 ml-1.5 min-w-4.5 rounded-full bg-danger px-1 text-center text-[10px] font-bold leading-[18px] text-white">
-                        {pending > 9 ? "9+" : pending}
+                        {badge.count > 9 ? "9+" : badge.count}
                       </span>
                     )}
                   </Link>

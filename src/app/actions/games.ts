@@ -1,8 +1,10 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import { z } from "zod";
 import { friendlyError } from "@/lib/errors";
+import { emailHostNewRequest, emailRequesterAccepted, emailRequesterDeclined } from "@/lib/request-emails";
 import { SPORT_IDS } from "@/lib/sports";
 import { createClient, getUserId } from "@/lib/supabase/server";
 import type { ActionResult } from "@/lib/types";
@@ -61,8 +63,9 @@ export async function requestToJoin(gameId: string, note: string): Promise<Actio
   const ctx = await authed();
   if (!ctx) return { ok: false, error: "Please sign in to ask to join." };
   if (!uuid.safeParse(gameId).success) return { ok: false, error: "Invalid game" };
-  const { error } = await ctx.supabase.rpc("request_to_join", { p_game: gameId, p_note: note.slice(0, 280) });
+  const { data, error } = await ctx.supabase.rpc("request_to_join", { p_game: gameId, p_note: note.slice(0, 280) });
   if (error) return { ok: false, error: friendlyError(error) };
+  after(() => emailHostNewRequest(data as string));
   revalidatePath("/games/[slug]", "page");
   revalidatePath("/requests");
   revalidatePath("/messages");
@@ -87,6 +90,7 @@ export async function acceptRequest(requestId: string): Promise<ActionResult<{ c
   if (!uuid.safeParse(requestId).success) return { ok: false, error: "Invalid request" };
   const { data, error } = await ctx.supabase.rpc("accept_request", { p_request: requestId });
   if (error) return { ok: false, error: friendlyError(error) };
+  after(() => emailRequesterAccepted(requestId, data as string));
   revalidatePath("/requests");
   revalidatePath("/messages");
   return { ok: true, data: { conversationId: data as string } };
@@ -98,8 +102,21 @@ export async function declineRequest(requestId: string, reason: string): Promise
   if (!uuid.safeParse(requestId).success) return { ok: false, error: "Invalid request" };
   const { error } = await ctx.supabase.rpc("decline_request", { p_request: requestId, p_reason: reason.slice(0, 200) });
   if (error) return { ok: false, error: friendlyError(error) };
+  after(() => emailRequesterDeclined(requestId));
   revalidatePath("/requests");
   return { ok: true };
+}
+
+/** Host opens a chat with someone who asked to join, before accepting or declining. */
+export async function openRequestChat(requestId: string): Promise<ActionResult<{ conversationId: string }>> {
+  const ctx = await authed();
+  if (!ctx) return { ok: false, error: "Please sign in again." };
+  if (!uuid.safeParse(requestId).success) return { ok: false, error: "Invalid request" };
+  const { data, error } = await ctx.supabase.rpc("open_request_chat", { p_request: requestId });
+  if (error) return { ok: false, error: friendlyError(error) };
+  revalidatePath("/messages");
+  revalidatePath("/requests");
+  return { ok: true, data: { conversationId: data as string } };
 }
 
 // ---------------------------------------------------------------- paid games
@@ -143,5 +160,29 @@ export async function setNoShow(gameId: string, userId: string, noShow: boolean)
   const { error } = await ctx.supabase.rpc("set_no_show", { p_game: gameId, p_user: userId, p_no_show: noShow });
   if (error) return { ok: false, error: friendlyError(error) };
   revalidatePath("/games/[slug]", "page");
+  return { ok: true };
+}
+
+// ---------------------------------------------------------------- reviews
+
+const reviewSchema = z.object({
+  gameId: uuid,
+  revieweeId: uuid,
+  rating: z.number().int().min(1, "Pick 1 to 5 stars").max(5, "Pick 1 to 5 stars"),
+  comment: z.string().trim().max(500).optional().transform((v) => v || null),
+});
+
+export async function submitReview(input: z.input<typeof reviewSchema>): Promise<ActionResult> {
+  const ctx = await authed();
+  if (!ctx) return { ok: false, error: "Please sign in again." };
+  const parsed = reviewSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Check the review" };
+  const v = parsed.data;
+  const { error } = await ctx.supabase.rpc("submit_review", {
+    p_game: v.gameId, p_reviewee: v.revieweeId, p_rating: v.rating, p_comment: v.comment,
+  });
+  if (error) return { ok: false, error: friendlyError(error) };
+  revalidatePath("/games/[slug]", "page");
+  revalidatePath("/me");
   return { ok: true };
 }

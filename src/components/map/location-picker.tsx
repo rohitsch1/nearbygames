@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { env } from "@/lib/env";
 import type { LatLng } from "@/lib/geo";
-import { hasMapsKey } from "./maps-provider";
+import { MapBoundary, useMapsAvailable } from "./maps-provider";
 
 interface Props {
   value: LatLng | null;
@@ -20,6 +20,7 @@ interface Props {
 export function LocationPicker({ value, initialCenter, onChange }: Props) {
   const [locating, setLocating] = useState(false);
   const [flyTo, setFlyTo] = useState<LatLng | null>(null);
+  const mapsOn = useMapsAvailable();
 
   function useCurrent() {
     if (!navigator.geolocation) return toast.error("Location isn't available on this device");
@@ -36,39 +37,43 @@ export function LocationPicker({ value, initialCenter, onChange }: Props) {
     );
   }
 
+  const preview = (
+    <div className="flex h-24 items-center justify-center rounded-2xl border border-dashed border-line bg-surface-2 text-sm text-muted">
+      {value ? `📍 ${value.lat.toFixed(5)}, ${value.lng.toFixed(5)}` : "Use your current location to place the game"}
+    </div>
+  );
+
   return (
     <div className="space-y-2">
-      {hasMapsKey ? (
-        <div className="relative h-64 overflow-hidden rounded-2xl border border-line md:h-80">
-          <GoogleMap
-            defaultCenter={value ?? initialCenter}
-            defaultZoom={16}
-            mapId={env.googleMapsMapId}
-            gestureHandling="greedy"
-            disableDefaultUI
-            zoomControl
-            clickableIcons={false}
-            className="size-full"
-            onIdle={(e) => {
-              const c = e.map.getCenter();
-              if (c) onChange({ lat: c.lat(), lng: c.lng() });
-            }}
-          >
-            <Fly target={flyTo} />
-          </GoogleMap>
-          {/* Fixed centre pin */}
-          <div className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-full">
-            <MapPin className="size-10 fill-brand text-white drop-shadow-lg" strokeWidth={1.5} />
+      {mapsOn ? (
+        <MapBoundary fallback={preview}>
+          <div className="relative h-64 overflow-hidden rounded-2xl border border-line md:h-80">
+            <GoogleMap
+              defaultCenter={value ?? initialCenter}
+              defaultZoom={16}
+              mapId={env.googleMapsMapId}
+              gestureHandling="greedy"
+              disableDefaultUI
+              zoomControl
+              clickableIcons={false}
+              className="size-full"
+              onIdle={(e) => {
+                const c = e.map.getCenter();
+                if (c) onChange({ lat: c.lat(), lng: c.lng() });
+              }}
+            >
+              <Fly target={flyTo} />
+            </GoogleMap>
+            {/* Fixed centre pin */}
+            <div className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-full">
+              <MapPin className="size-10 fill-brand text-white drop-shadow-lg" strokeWidth={1.5} />
+            </div>
+            <p className="pointer-events-none absolute inset-x-0 top-3 mx-auto w-fit rounded-full bg-surface/90 px-3 py-1 text-xs font-semibold shadow-card">
+              Drag the map to put the pin on the gate
+            </p>
           </div>
-          <p className="pointer-events-none absolute inset-x-0 top-3 mx-auto w-fit rounded-full bg-surface/90 px-3 py-1 text-xs font-semibold shadow-card">
-            Drag the map to put the pin on the gate
-          </p>
-        </div>
-      ) : (
-        <div className="flex h-24 items-center justify-center rounded-2xl border border-dashed border-line bg-surface-2 text-sm text-muted">
-          {value ? `📍 ${value.lat.toFixed(5)}, ${value.lng.toFixed(5)}` : "Use your current location to place the game"}
-        </div>
-      )}
+        </MapBoundary>
+      ) : preview}
       <Button type="button" variant="outline" size="sm" onClick={useCurrent} disabled={locating}
         icon={locating ? <Spinner /> : <LocateFixed className="size-4" />}>
         Use my current location

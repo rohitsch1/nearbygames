@@ -16,6 +16,7 @@ export const metadata: Metadata = { title: "Messages", robots: { index: false, f
 type Person = { id: string; full_name: string | null; avatar_url: string | null };
 interface ConvRow {
   id: string;
+  game_id: string;
   host_id: string;
   last_message: string | null;
   last_message_at: string;
@@ -23,7 +24,7 @@ interface ConvRow {
   host: Person;
   player: Person;
 }
-interface PendingRow { id: string; game: { slug: string; sport: Sport; spot_name: string; starts_at: string; host: { full_name: string | null } } }
+interface PendingRow { id: string; game: { id: string; slug: string; sport: Sport; spot_name: string; starts_at: string; host: { full_name: string | null } } }
 
 export default async function MessagesPage() {
   const session = await getSession();
@@ -33,12 +34,12 @@ export default async function MessagesPage() {
   const [{ data: convs }, { data: pending }, { data: unread }] = await Promise.all([
     supabase
       .from("conversations")
-      .select("id, host_id, last_message, last_message_at, game:games(slug, sport, spot_name, starts_at), host:profiles!conversations_host_id_fkey(id, full_name, avatar_url), player:profiles!conversations_player_id_fkey(id, full_name, avatar_url)")
+      .select("id, game_id, host_id, last_message, last_message_at, game:games(slug, sport, spot_name, starts_at), host:profiles!conversations_host_id_fkey(id, full_name, avatar_url), player:profiles!conversations_player_id_fkey(id, full_name, avatar_url)")
       .order("last_message_at", { ascending: false })
       .limit(100),
     supabase
       .from("join_requests")
-      .select("id, game:games(slug, sport, spot_name, starts_at, host:profiles!games_host_id_fkey(full_name))")
+      .select("id, game:games(id, slug, sport, spot_name, starts_at, host:profiles!games_host_id_fkey(full_name))")
       .eq("requester_id", session.userId)
       .eq("status", "pending")
       .order("created_at", { ascending: false }),
@@ -48,7 +49,9 @@ export default async function MessagesPage() {
   const unreadBy = new Map<string, number>();
   (unread ?? []).forEach((n) => n.link && unreadBy.set(n.link as string, (unreadBy.get(n.link as string) ?? 0) + 1));
   const conversations = (convs ?? []) as unknown as ConvRow[];
-  const locked = (pending ?? []) as unknown as PendingRow[];
+  // A pending request only shows as "locked" until the host opens a chat about it.
+  const chatGames = new Set(conversations.map((c) => c.game_id));
+  const locked = ((pending ?? []) as unknown as PendingRow[]).filter((r) => !chatGames.has(r.game.id));
 
   return (
     <div className="mx-auto max-w-3xl px-4 pb-24 md:px-8">
