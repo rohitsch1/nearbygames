@@ -27,7 +27,7 @@ export function TopUpForm({ enabled, next, email, name }: { enabled: boolean; ne
       const order = (await res.json()) as OrderResponse & { error?: string };
       if (!res.ok) throw new Error(order.error ?? "Couldn't start payment");
       if (order.mode === "pending") {
-        toast.info("Online payments aren't live yet — this top-up was recorded as pending.");
+        toast.info("Online payments are switched off on the server (no Razorpay keys found), so this top-up was recorded as pending.");
         return;
       }
       const result = await payWithRazorpay(order, { description: "Wallet top-up", method, email, name });
@@ -46,7 +46,7 @@ export function TopUpForm({ enabled, next, email, name }: { enabled: boolean; ne
   return (
     <section className="mt-6 rounded-2xl border border-line bg-surface p-4">
       <h2 className="font-bold">Add money</h2>
-      {!enabled && <p className="mt-1 text-sm text-muted">Online top-ups run in test mode until Razorpay keys are added.</p>}
+      {!enabled && <p className="mt-1 text-sm text-muted">Online top-ups are off until Razorpay keys are added on the server.</p>}
       <div className="mt-4 grid grid-cols-4 gap-2">
         {PRESETS.map((p) => (
           <button key={p} type="button" onClick={() => setAmount(p)} aria-pressed={amount === p}

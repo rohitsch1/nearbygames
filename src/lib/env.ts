@@ -8,7 +8,6 @@ export const env = {
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "",
   googleMapsKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? "",
   googleMapsMapId: process.env.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID || "DEMO_MAP_ID",
-  razorpayKeyId: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID ?? "",
   phoneAuth: process.env.NEXT_PUBLIC_ENABLE_PHONE_AUTH === "true",
   appleAuth: process.env.NEXT_PUBLIC_ENABLE_APPLE_AUTH === "true",
 };

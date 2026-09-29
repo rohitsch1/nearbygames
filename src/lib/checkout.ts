@@ -9,14 +9,20 @@ interface RazorpayOptions {
   name: string;
   description: string;
   order_id: string;
-  prefill?: { email?: string; contact?: string; name?: string };
-  method?: { upi?: boolean; card?: boolean; netbanking?: boolean; wallet?: boolean };
+  prefill?: { email?: string; contact?: string; name?: string; method?: "upi" | "card" };
   theme?: { color?: string };
+  config?: {
+    display: {
+      blocks: Record<string, { name: string; instruments: Record<string, unknown>[] }>;
+      sequence: string[];
+      preferences: { show_default_blocks: boolean };
+    };
+  };
   handler: (r: RazorpayResponse) => void;
   modal?: { ondismiss?: () => void };
 }
 declare global {
-  interface Window { Razorpay?: new (o: RazorpayOptions) => { open: () => void; on: (e: string, cb: () => void) => void } }
+  interface Window { Razorpay?: new (o: RazorpayOptions) => { open: () => void; on: (e: string, cb: (r: { error?: { description?: string } }) => void) => void } }
 }
 
 let loading: Promise<void> | null = null;
@@ -52,9 +58,11 @@ export async function payWithRazorpay(order: Extract<OrderResponse, { mode: "raz
       name: "nearbygames",
       description: opts.description,
       order_id: order.orderId,
-      prefill: { email: opts.email ?? undefined, name: opts.name ?? undefined },
-      method: { upi: opts.method === "upi", card: opts.method === "card", netbanking: false, wallet: false },
+      // Don't whitelist methods: hiding everything except one (e.g. UPI) leaves Checkout empty when
+      // that method isn't enabled on the account. We only *prefer* the one the user picked.
+      prefill: { email: opts.email ?? undefined, name: opts.name ?? undefined, method: opts.method },
       theme: { color: "#12b76a" },
+      config: checkoutDisplay(opts.method),
       handler: async (r) => {
         try {
           const res = await fetch("/api/payments/verify", {
@@ -71,7 +79,30 @@ export async function payWithRazorpay(order: Extract<OrderResponse, { mode: "raz
       },
       modal: { ondismiss: () => resolve(null) },
     });
-    rzp.on("payment.failed", () => { /* Checkout shows the error and lets the user retry */ });
+    // Checkout shows the failure and lets the user retry; we just log it for debugging.
+    rzp.on("payment.failed", (r) => console.warn("[razorpay] payment failed:", r?.error?.description));
     rzp.open();
   });
+}
+
+/**
+ * Put UPI at the top of Razorpay Checkout: QR code (scan with any UPI app — shown on desktop),
+ * app buttons like Google Pay / PhonePe / Paytm (intent — shown on phones) and "enter UPI ID" (collect).
+ * Razorpay still only shows UPI if it's enabled for your account (Dashboard → Account & Settings → Payment methods).
+ * Other enabled methods (cards, netbanking, wallets) stay visible underneath.
+ */
+function checkoutDisplay(preferred: "upi" | "card"): RazorpayOptions["config"] {
+  return {
+    display: {
+      blocks: {
+        upi: {
+          name: "Pay with UPI — scan QR, Google Pay, PhonePe or UPI ID",
+          instruments: [{ method: "upi", flows: ["qr", "intent", "collect"], apps: ["google_pay", "phonepe", "paytm", "bhim"] }],
+        },
+        cards: { name: "Cards", instruments: [{ method: "card" }] },
+      },
+      sequence: preferred === "card" ? ["block.cards", "block.upi"] : ["block.upi", "block.cards"],
+      preferences: { show_default_blocks: true },
+    },
+  };
 }

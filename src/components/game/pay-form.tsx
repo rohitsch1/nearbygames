@@ -33,8 +33,8 @@ export function PayForm({ gameId, slug, description, sharePaise, feePaise, walle
 
   const methods: { id: PaymentMethod; label: string; sub: string; icon: typeof Wallet; disabled?: boolean }[] = [
     { id: "wallet", label: "nearbygames wallet", sub: walletEnough ? `Balance ${formatINR(walletPaise)}` : `Balance ${formatINR(walletPaise)} — not enough`, icon: Wallet, disabled: !walletEnough },
-    { id: "upi", label: "UPI", sub: razorpayEnabled ? "GPay, PhonePe, Paytm, any UPI app" : "Test mode — recorded as pending", icon: Smartphone },
-    { id: "card", label: "Card", sub: razorpayEnabled ? "Debit or credit card" : "Test mode — recorded as pending", icon: CreditCard },
+    { id: "upi", label: "UPI", sub: razorpayEnabled ? "GPay, PhonePe, Paytm — via Razorpay" : "Online payments are off — recorded as pending", icon: Smartphone },
+    { id: "card", label: "Card", sub: razorpayEnabled ? "Cards, netbanking & more — via Razorpay" : "Online payments are off — recorded as pending", icon: CreditCard },
     { id: "in_person", label: "Pay the host at the ground", sub: `Hand over ${formatINR(sharePaise)} in cash or UPI when you arrive`, icon: Banknote },
   ];
 
@@ -56,7 +56,7 @@ export function PayForm({ gameId, slug, description, sharePaise, feePaise, walle
       const order = (await orderRes.json()) as OrderResponse & { error?: string };
       if (!orderRes.ok) throw new Error(order.error ?? "Couldn't start payment");
       if (order.mode === "pending") {
-        toast.info("Card/UPI payments aren't live yet — your payment was recorded as pending. Use the wallet or pay in person to join now.");
+        toast.info("Online payments are switched off on the server (no Razorpay keys found), so this was recorded as pending. Use the wallet or pay in person to join now.");
         setBusy(false);
         return;
       }

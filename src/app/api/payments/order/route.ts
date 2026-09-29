@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { friendlyError } from "@/lib/errors";
-import { env } from "@/lib/env";
-import { isRazorpayConfigured, razorpay } from "@/lib/razorpay";
+import { describeRazorpayError, isRazorpayConfigured, razorpay, razorpayKeyId } from "@/lib/razorpay";
 import { createAdminClient, getUserId } from "@/lib/supabase/server";
 
 const schema = z.discriminatedUnion("purpose", [
@@ -36,6 +35,7 @@ export async function POST(request: Request) {
 
   // No provider wired up: keep the row as "pending" (matches the documented placeholder behaviour).
   if (!isRazorpayConfigured()) {
+    console.warn("[razorpay] keys not found on the server — recording payment as pending. Set NEXT_PUBLIC_RAZORPAY_KEY_ID + RAZORPAY_KEY_SECRET and restart.");
     return NextResponse.json({ mode: "pending", paymentId: p.id, amount: p.amount_paise });
   }
 
@@ -52,11 +52,11 @@ export async function POST(request: Request) {
       paymentId: p.id,
       orderId: order.id,
       amount: p.amount_paise,
-      keyId: env.razorpayKeyId,
+      keyId: razorpayKeyId(),
     });
   } catch (e) {
     console.error("[razorpay] order create failed", e);
     await admin.rpc("fail_provider_payment", { p_payment: p.id });
-    return NextResponse.json({ error: "Couldn't start the payment. Try the wallet or pay in person." }, { status: 502 });
+    return NextResponse.json({ error: describeRazorpayError(e) }, { status: 502 });
   }
 }
