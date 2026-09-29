@@ -46,13 +46,13 @@ export default function LandingPage() {
         <div className="mx-auto grid max-w-6xl items-center gap-12 px-4 pb-16 pt-12 md:grid-cols-2 md:px-8 md:pb-24 md:pt-20">
           <div className="animate-fade-up">
             <p className="mb-4 inline-flex items-center gap-2 rounded-full bg-brand-soft px-3 py-1 text-sm font-semibold text-brand-strong">
-              <span className="size-2 animate-pulse rounded-full bg-brand" /> Games happening near you, right now
+              <span className="size-2 animate-pulse rounded-full bg-brand" /> Gully games happening in your mohalla, right now
             </p>
             <h1 className="text-4xl font-extrabold leading-[1.05] tracking-tight sm:text-5xl lg:text-6xl">
-              Find a pickup game near you. <span className="text-brand">Or start one.</span>
+              Gully cricket in your lane. <span className="text-brand">Volleyball on the empty plot.</span>
             </h1>
             <p className="mt-5 max-w-lg text-lg text-muted">
-              Football on the turf, badminton doubles, box cricket, a chess meetup or a FIFA night — open the map and see every game within a few kilometres. Tap one, ask to join, play.
+              Host a game at your home, your chhat or the khali plot down the road — and let everyone nearby find it. Gully cricket, volleyball, badminton, carrom, a FIFA night. Open the map, tap a game, ask to join.
             </p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <LinkButton href="/map" size="lg" icon={<MapPin className="size-5" />}>Open the map</LinkButton>
@@ -68,7 +68,7 @@ export default function LandingPage() {
       <section id="how-it-works" className="scroll-mt-20 border-y border-line bg-surface">
         <div className="mx-auto max-w-6xl px-4 py-16 md:px-8 md:py-24">
           <h2 className="text-3xl font-extrabold tracking-tight md:text-4xl">Open the map. Tap a game. You&apos;re playing.</h2>
-          <p className="mt-3 max-w-2xl text-muted">The difference between texting five group chats “anyone up for badminton tonight?” and seeing every game near you in one place.</p>
+          <p className="mt-3 max-w-2xl text-muted">The difference between shouting “cricket khelega?” down the gali and hoping enough people hear — and seeing every game in your area in one place.</p>
           <ol className="mt-10 grid gap-6 md:grid-cols-3">
             {[
               { icon: MapPin, title: "See what's on", body: "Every open game nearby shows up on a live map — the nearest and the paid ones stand out. Filter to “next two hours” or “free only”." },
@@ -93,12 +93,12 @@ export default function LandingPage() {
           <div className="rounded-3xl border-2 border-brand/30 bg-brand-soft p-8">
             <ShieldCheck className="size-8 text-brand-strong" />
             <h3 className="mt-4 text-2xl font-bold">Free games</h3>
-            <p className="mt-2 text-muted">The Thursday football game, cricket on the society ground, the café chess meetup. The host is trusting strangers to show up, so they see who&apos;s asking — reliability, distance and your note — before saying yes.</p>
+            <p className="mt-2 text-muted">Gully cricket in the lane, volleyball on the empty plot, carrom at home. The host is trusting strangers to show up, so they see who&apos;s asking — reliability, distance and your note — before saying yes.</p>
           </div>
           <div className="rounded-3xl border-2 border-paid/30 bg-paid-soft p-8">
             <Zap className="size-8 text-paid-strong" />
             <h3 className="mt-4 text-2xl font-bold">Paid games</h3>
-            <p className="mt-2 text-muted">Booked a badminton court or a turf slot? Set a per-player fee. Players pay their share by wallet, UPI, card or cash at the ground — and they&apos;re in immediately. No approvals to babysit.</p>
+            <p className="mt-2 text-muted">Booked a box-cricket turf or need to split the ball and net? Set a per-player fee. Players pay their share by wallet, UPI, card or cash at the ground — and they&apos;re in immediately. No approvals to babysit.</p>
           </div>
         </div>
       </section>
@@ -193,7 +193,7 @@ function HeroVisual() {
           <rect x="8" y="160" width="22" height="16" rx="2" fill="#bfe3c9" />
         </svg>
         <div className="absolute inset-x-3 top-8 flex items-center gap-2 rounded-2xl bg-white px-3 py-2.5 text-xs font-semibold text-[#0b1220] shadow-card">
-          <MapPin className="size-3.5 text-[#12b76a]" /> HSR Layout, Bengaluru
+          <MapPin className="size-3.5 text-[#12b76a]" /> Model Town, Hisar
         </div>
         {pins.map((p) => (
           <span key={p.e} className="absolute flex -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-[3px] bg-white shadow-float"

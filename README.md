@@ -1,126 +1,232 @@
-# nearbygames
+<p align="center">
+  <img src="docs/media/hero.png" alt="nearbygames: gully games hosted from your home, your chhat or the khali plot" width="100%" />
+</p>
 
-Find or start a pickup game near you. Football, cricket, badminton, chess, FIFA nights: anyone can drop a game on the map, and anyone nearby can find it and join.
+<h1 align="center">nearbygames</h1>
 
-> **Free games are a request. Paid games are a transaction.**
-> A free game never lets you skip the host's yes. A paid game never makes you wait for one.
-> This rule is enforced in the **database** (Postgres functions and row-level security). The UI only reflects it.
+<p align="center">
+  <b>Gully cricket in your lane. Volleyball on the empty plot. Carrom at home.</b><br/>
+  The hyperlocal way to play in Bharat: host a game wherever you already play, and everyone nearby can find it and join.
+</p>
 
-## Stack
+<p align="center">
+  <img alt="Next.js 16" src="https://img.shields.io/badge/Next.js-16-000?logo=nextdotjs" />
+  <img alt="Supabase" src="https://img.shields.io/badge/Supabase-Postgres%20%2B%20PostGIS-3ecf8e?logo=supabase&logoColor=white" />
+  <img alt="Tailwind CSS v4" src="https://img.shields.io/badge/Tailwind-v4-38bdf8?logo=tailwindcss&logoColor=white" />
+  <img alt="Razorpay UPI" src="https://img.shields.io/badge/Payments-UPI%20via%20Razorpay-0c2451?logo=razorpay&logoColor=white" />
+  <img alt="Made for Bharat" src="https://img.shields.io/badge/Made%20for-Bharat%20%F0%9F%87%AE%F0%9F%87%B3-12b76a" />
+</p>
 
-| Part | Choice | Why |
-|---|---|---|
-| Web framework | **Next.js 16** (App Router, Turbopack, Server Actions), TypeScript | SSR/ISR for SEO, one codebase |
-| Styling | **Tailwind CSS v4**, self-hosted Plus Jakarta Sans | Responsive (mobile → tablet → desktop), light and dark mode |
-| Database / auth / realtime / storage | **Supabase** (free tier): Postgres + PostGIS, Auth, Realtime, Storage | "Games near me" is one PostGIS query. Chat is realtime |
-| Maps | **Google Maps JS API** (`@vis.gl/react-google-maps`), Advanced Markers, Places (New), Geocoding | |
-| Payments | **Razorpay** (test mode), in-app wallet, pay in person | |
-| Hosting | **Vercel** (free tier) | |
+---
 
-## What's built
+## Why nearbygames
 
-- **Sign in**: email one-time code and Google (built). Phone OTP is built but switched off by a flag until an SMS provider is added. Apple is behind a flag.
-- **6-box code screen**: auto-submits on the 6th digit, supports paste and SMS autofill, 30 s resend countdown.
-- **Complete your profile** (skippable): photo (compressed to WebP in the browser), name, neighbourhood (can be located and is rounded to about 100 m), occupation, ID-check toggle.
-- **Welcome tour**: free vs paid explained, pick your sports, location permission with a privacy note.
-- **Map (home)**: live markers per sport, the nearest one bigger, paid ones amber. Filters: "Next 2 hours", "Free only", and per sport. Place search, recenter button, summary card and "Start a game". A list view on mobile and a side list on tablet and desktop.
-- **Game page**: server-rendered with `SportsEvent` + breadcrumb JSON-LD and a dynamic OG image. The call-to-action switches between 6 states (own game, you're in, full, paid → pay, request pending → withdraw, free → note + ask), plus signed-out, declined, cancelled and ended.
-- **Pay for a spot**: share + platform fee (5%, min ₹5, max ₹50). Wallet and pay-in-person work for real; UPI and card go through Razorpay Checkout.
-- **Start a game**: sport, photo, drag-the-map pin or current location, spot name and city (city filled from geocoding), date and time in IST, duration, players, free/paid + fee, notes.
-- **Requests**: "To your games" shows reliability badge, coarse distance band and note, with Accept/Decline (optional reason). "You asked to join" lists each request with its status, a withdraw button while pending, and a chat link once accepted. A live bell badge shows pending requests.
-- **Messages**: a conversation list with unread counts. Pending free games show as **locked rows**, because a chat only exists once you're in.
-- **Chat**: realtime, optimistic sending (deduplicated by `client_id`), retry on failure, loads older messages on scroll.
-- **Me**: stats (played / hosted / no-shows), a verification progress bar showing what it unlocks, wallet + transactions + top-up, upcoming and past games, sports, notifications toggle, replay tour, sign out.
-- **Host tools**: mark no-shows once the game has started. Cancelling a game refunds paid players to their wallets.
-- **In-app pings**: realtime toasts, plus system notifications when the tab is in the background and permission was granted.
+In most of India, and especially in Tier-2 and Tier-3 towns, people don't play at stadiums or ₹1,500-an-hour turfs. They play **in the gali, on the chhat, on the khali plot behind the mandir, on the school ground after hours, or around a carrom board at home**. The places already exist. What's missing is a way for the neighbours down the road to know a game is on.
 
-### SEO
+Today, a game fills up by shouting *"cricket khelega?"* down the lane, or by forwarding a message to five WhatsApp groups and hoping. nearbygames turns **any home or empty space into a venue**:
 
-- Public, indexable pages: `/` (landing with FAQPage JSON-LD), `/play`, `/play/[sport]`, `/play/[sport]/[city]` (ISR every 5 min; empty non-featured cities are `noindex`), and `/games/[slug]` (SSR). The map is public too, and actions ask you to sign in.
-- `sitemap.xml` covers static pages, sports, featured cities and every city that has games, and all upcoming games. `robots.txt` keeps private routes out. Every page has a canonical URL. OG and Twitter images are generated.
-- Web app manifest, icons, `theme-color`, and past or cancelled games switch to `noindex`.
+- 🏠 **Host from wherever you are.** Drop a pin on your lane, your terrace or the empty plot. No booking, no venue partner.
+- 📍 **Everyone within a few kilometres sees it on a map**, with the sport, the time, how many spots are left and a note like *"blue gate, ground floor"*.
+- 🙋 **Free games are a request.** The host sees who is asking (a reliability badge, a rough distance, their note) before saying yes. That matters when strangers are coming to your galli or your home.
+- 💸 **Paid games are a transaction.** Splitting a box-cricket turf or a volleyball net? Set ₹50 a head, and players pay by UPI, wallet or cash at the ground and they're in, with no approvals to manage.
+- 💬 **Chat opens the moment you're in**, so the exact gate and who brings the ball get sorted there, not in public.
 
-### Privacy and security model
+> **The one rule:** a free game never lets you skip the host's yes, and a paid game never makes you wait for one.
+> It's enforced in the database (Postgres row-level security and functions), not just in the UI.
 
-- A user's live location **never leaves the device**. It only centres the map and computes distances on the device. The saved neighbourhood is rounded to about 100 m and only its owner can read it (`profile_private`, owner-only RLS).
-- Hosts see a coarse **distance band** ("1–3 km") that is fixed when the request is made. A game's pin can't be moved once anyone has asked or joined, so a host can't triangulate someone's home.
-- Chats are readable only by their two members. A player can't see who else has joined a game unless they are in it (a per-game roster function).
-- Money moves only inside `SECURITY DEFINER` functions, atomically and with row locks. Payment confirmation is idempotent: a payment is processed only while it is pending.
-- The client can't write `players_count`, `status`, the fee, the host, wallets, payments or participants (column grants plus RLS). EXECUTE on every function is revoked, then granted back per role.
-- Open-redirect-safe `?next=` handling, Razorpay signatures checked with HMAC and a constant-time compare, security headers in `next.config.ts`.
+---
 
-## Run it
+## See it in action
 
-### 1. Install
+> The demos were recorded on a phone-sized screen against the demo data in [`supabase/seed.sql`](supabase/seed.sql): gully games around Model Town, **Hisar**. They were recorded without a Google Maps key, so the map is the built-in preview map. With a key, the same pins sit on real Google Maps streets.
+
+<table>
+  <tr>
+    <td align="center" width="50%">
+      <img src="docs/media/01-find-and-join.gif" width="260" alt="Finding a gully cricket game and asking to join" /><br/>
+      <b>1 · Find a gully game and ask to join</b><br/>
+      <sub>Open the map, tap the cricket pin in Gali No. 4, sign in with a one-time code, pick your sports, leave a note for the host and ask to join. The chat stays locked until the host says yes.</sub><br/>
+      <a href="docs/media/01-find-and-join.mp4">▶ MP4 (33 s)</a>
+    </td>
+    <td align="center" width="50%">
+      <img src="docs/media/02-host-accepts.gif" width="260" alt="Host accepting a request and chatting" /><br/>
+      <b>2 · The host says yes and the chat opens</b><br/>
+      <sub>The bell badge shows a waiting request. The host sees Priya's note and reliability, taps Accept, and a chat opens straight away: <i>"Aaja! Blue gate ke saamne, 6 baje."</i></sub><br/>
+      <a href="docs/media/02-host-accepts.mp4">▶ MP4 (16 s)</a>
+    </td>
+  </tr>
+  <tr>
+    <td align="center">
+      <img src="docs/media/03-host-a-game.gif" width="260" alt="Hosting a volleyball game on an empty plot" /><br/>
+      <b>3 · Host a game on the khali plot</b><br/>
+      <sub>Tap Start a game, choose Volleyball, drop the pin with "use my current location", name the spot, set players and notes, then "Drop it on the map". It's live for everyone nearby within seconds.</sub><br/>
+      <a href="docs/media/03-host-a-game.mp4">▶ MP4 (21 s)</a>
+    </td>
+    <td align="center">
+      <img src="docs/media/04-paid-game.gif" width="260" alt="Paying for a box cricket game and joining instantly" /><br/>
+      <b>4 · Pay your share and you're in</b><br/>
+      <sub>Paid games need a fuller profile. Fill it in once, pick wallet, UPI, card or cash at the ground, pay ₹65 (₹60 share + ₹5 fee) and the chat with the host opens. There's no approval step.</sub><br/>
+      <a href="docs/media/04-paid-game.mp4">▶ MP4 (13 s)</a>
+    </td>
+  </tr>
+</table>
+
+<p align="center">
+  <img src="docs/media/05-desktop.gif" width="100%" alt="Desktop: landing page, map with game list, game page" /><br/>
+  <b>5 · Works on tablet and desktop too:</b> landing page, map with a live game list, and a public game page Google can index. <a href="docs/media/05-desktop.mp4">▶ MP4</a>
+</p>
+
+---
+
+## Screens
+
+<table>
+  <tr>
+    <td align="center"><img src="docs/media/screens/01-landing.png" width="200" /><br/><sub>Landing</sub></td>
+    <td align="center"><img src="docs/media/screens/03-map.png" width="200" /><br/><sub>Map: every game nearby</sub></td>
+    <td align="center"><img src="docs/media/screens/04-list.png" width="200" /><br/><sub>List view</sub></td>
+    <td align="center"><img src="docs/media/screens/05-game-free.png" width="200" /><br/><sub>A free game: ask to join</sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/media/screens/08-requests.png" width="200" /><br/><sub>Requests to your games</sub></td>
+    <td align="center"><img src="docs/media/screens/09-chat.png" width="200" /><br/><sub>Chat opens once you're in</sub></td>
+    <td align="center"><img src="docs/media/screens/10-host-new.png" width="200" /><br/><sub>Start a game</sub></td>
+    <td align="center"><img src="docs/media/screens/11-pay.png" width="200" /><br/><sub>Pay for a spot</sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/media/screens/02-sign-in.png" width="200" /><br/><sub>Sign in, no passwords</sub></td>
+    <td align="center"><img src="docs/media/screens/06-messages.png" width="200" /><br/><sub>Messages</sub></td>
+    <td align="center"><img src="docs/media/screens/07-me.png" width="200" /><br/><sub>Me: stats, verification, wallet</sub></td>
+    <td></td>
+  </tr>
+</table>
+
+---
+
+## What people host on it
+
+| | Game | Where it happens | Typical setup |
+|---|---|---|---|
+| 🏏 | **Gully cricket** | Your lane, the society ground | Free · 10–12 players · tennis ball, "one-tip-one-hand" |
+| 🏐 | **Gully volleyball** | The khali plot, a school ground | Free · net tied between two poles |
+| 🏸 | **Terrace badminton** | Someone's chhat | Free · 4 players · lights till 10 |
+| 🎯 | **Carrom / board games** | At home | Free · 4–8 players · chai included |
+| 🏏 | **Box cricket** | A local turf | Paid · ₹50–100 a head splits the booking |
+| ⚽ | **7-a-side football** | School ground after hours | Free · 14 players |
+| 🎮 | **FIFA night** | Someone's living room | Paid · ₹50 covers snacks |
+
+Chess, basketball, tennis, table tennis, pickleball, running and "anything else" are built in too.
+
+---
+
+## Features
+
+**For players**
+- A live **map of games within a few kilometres**, with filters for *next 2 hours*, *free only* and by sport. The nearest game is shown bigger and paid games in amber. There's a list view too.
+- **Ask to join** free games with a note ("Can I bring a friend?"), and withdraw any time before the host answers.
+- **Pay and join instantly** for paid games: nearbygames wallet, **UPI (QR / Google Pay / PhonePe / Paytm / UPI ID via Razorpay)**, card, or cash to the host at the ground.
+- **Requests** tab showing where every request stands (waiting, accepted with a chat button, or declined with the host's reason).
+- **Realtime chat** with the host, with optimistic sending and retry.
+
+**For hosts**
+- **Start a game in about 30 seconds**: sport, optional photo of the spot, a pin placed by dragging the map or with *use my current location*, time, players, free or paid, and notes.
+- **Accept or decline** each request, seeing the player's **reliability badge** (new / regular / flaked before), a **rough distance band** and their note.
+- **Host tools**: mark no-shows after the game starts, or cancel a game. Anyone who paid is refunded to their wallet automatically.
+- **Wallet** for your share of paid games, plus in-app pings and browser notifications.
+
+**Trust & privacy, built for playing with neighbours**
+- Sign in with a **one-time code** (email today, phone OTP ready to switch on) or Google. No passwords.
+- **Your live location never leaves your phone.** Other players only see a rounded distance. Your saved neighbourhood is rounded to about 100 m and only you can read it.
+- Hosts see a **coarse distance band** ("1–3 km"), fixed when the request is made. A game's pin **can't be moved** once someone has asked or joined, so nobody can work out where a player lives.
+- **Hosting at home?** Drop the pin at your lane or a landmark and share the exact house in chat after you accept someone.
+- A **chat only exists once you're in the game**; until then it shows as a locked row.
+
+**Built to be found**
+- Public, server-rendered pages for every game (with event structured data and a share image), plus pages for each sport and each sport in each city (e.g. `/play/cricket/hisar`), a sitemap and robots rules.
+- Installable as an app on your phone's home screen, responsive from a 360 px phone to a desktop, and light and dark mode.
+
+---
+
+## How it's built
+
+```mermaid
+flowchart LR
+  subgraph Phone["Browser (phone / desktop)"]
+    UI["Next.js 16 app<br/>React 19 · Tailwind v4"]
+    GPS["Live location<br/>(stays on device)"]
+  end
+  subgraph Vercel["Next.js server"]
+    SSR["Server components<br/>SEO pages · game pages"]
+    ACT["Server actions<br/>zod-validated"]
+    PAY["/api/payments<br/>order · verify · webhook"]
+  end
+  subgraph Supabase
+    AUTH["Auth<br/>email OTP · Google"]
+    DB[("Postgres + PostGIS<br/>RLS + SECURITY DEFINER RPCs")]
+    RT["Realtime<br/>chat · requests · pings"]
+    ST["Storage<br/>avatars · ground photos"]
+  end
+  RZP["Razorpay<br/>UPI · cards"]
+  GM["Google Maps<br/>map · places · geocoding"]
+
+  GPS --> UI
+  UI --> SSR --> DB
+  UI --> ACT --> DB
+  UI <--> RT
+  UI --> AUTH
+  UI --> ST
+  UI --> GM
+  UI --> PAY --> RZP
+  RZP -- webhook --> PAY
+  PAY --> DB
+```
+
+| Part | Choice |
+|---|---|
+| App | **Next.js 16** (App Router, Turbopack, Server Actions), TypeScript, **Tailwind CSS v4** |
+| Data, auth, realtime, files | **Supabase** free tier: Postgres + **PostGIS** ("games near me" is one query), Auth, Realtime, Storage |
+| Maps | **Google Maps** (Advanced Markers, Places, Geocoding), with a built-in preview map when no key is set |
+| Payments | **Razorpay** (UPI, cards), in-app wallet, pay in person |
+| Hosting | **Vercel** free tier |
+| Quality | SQL tests for the core rules, unit tests (Vitest), ESLint, type-check, and CI on every push |
+
+---
+
+## Run it yourself
 
 ```bash
+git clone https://github.com/rohitsch1/nearbygames.git
+cd nearbygames
 npm install
-cp .env.example .env.local
+cp .env.example .env.local   # add your Supabase keys (Maps and Razorpay are optional)
+npm run dev                  # http://localhost:3000
 ```
 
-### 2. Supabase (free)
+Apply `supabase/migrations/20260928000000_init.sql` to your Supabase project first. To see the Hisar demo games, run `supabase/seed.sql` against a **local or test** database.
 
-1. Create a project at [supabase.com](https://supabase.com). Choose the Mumbai (ap-south-1) region for India.
-2. Apply the schema, either way works:
-   - **CLI:** `npx supabase link --project-ref <ref>` then `npx supabase db push`
-   - **Dashboard:** SQL Editor → paste `supabase/migrations/20260928000000_init.sql` → Run
-3. **Authentication → Sign In / Providers → Email**: enable it, turn **Confirm email on**, set OTP length to **6**.
-4. **Authentication → Emails → Templates**: paste `supabase/templates/otp.html` into both **Magic Link** and **Confirm signup**. The app verifies a 6-digit code (`{{ .Token }}`), not a link.
-5. **Authentication → URL Configuration**: Site URL = your domain. Add redirect URLs `https://YOUR_DOMAIN/auth/callback` and `http://localhost:3000/auth/callback`.
-6. **Google sign-in**: create an OAuth client in Google Cloud (Web). Authorised redirect URI = `https://<ref>.supabase.co/auth/v1/callback`. Paste the client ID and secret into Supabase → Providers → Google.
-7. **Custom SMTP** (strongly recommended for production): the built-in mailer is rate-limited to a few emails per hour. Brevo and Resend both have free tiers. Set it under Authentication → SMTP.
-8. Copy the Project URL, the publishable key and the secret key into `.env.local`.
-
-### 3. Google Maps
-
-In Google Cloud, enable **Maps JavaScript API**, **Places API (New)** and **Geocoding API**. Create an API key **restricted by HTTP referrer** (your domain + `localhost:3000`). Then Map Management → create a **JavaScript Map ID** (vector) and set `NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID`. Without a key, the app falls back to a list view.
-
-### 4. Razorpay (optional, test mode)
-
-Dashboard → Test mode → API keys → set `NEXT_PUBLIC_RAZORPAY_KEY_ID` and `RAZORPAY_KEY_SECRET`. Webhooks → add `https://YOUR_DOMAIN/api/webhooks/razorpay` with events `payment.captured` and `payment.failed`, and set `RAZORPAY_WEBHOOK_SECRET`. Without keys, UPI and card payments are recorded as **pending** (the documented placeholder behaviour).
-
-### 5. Develop
+**Full step-by-step setup** (Supabase auth emails, Google sign-in, Maps key, Razorpay + UPI, deploying to Vercel) is in **[docs/SETUP.md](docs/SETUP.md)**.
 
 ```bash
-npm run dev          # http://localhost:3000
-npm run lint
-npm run typecheck
-npm test             # unit tests (vitest)
-DATABASE_URL=postgres://… npm run test:db   # migration + rule tests on an empty Postgres with PostGIS
+npm run lint        # ESLint
+npm run typecheck   # TypeScript
+npm test            # unit tests
+DATABASE_URL=postgres://… npm run test:db   # rule tests against an empty Postgres with PostGIS
 ```
 
-With Docker you can run the whole stack locally: `npx supabase start` (uses `supabase/config.toml` and seeds demo games from `supabase/seed.sql`), then point `.env.local` at `http://127.0.0.1:54321`. OTP emails show up in the local Mailpit inbox.
+---
 
-### 6. Deploy (Vercel)
+## Roadmap for Bharat
 
-Import the repo and add every variable from `.env.example`. Set `NEXT_PUBLIC_SITE_URL` to the production URL; canonical URLs, the sitemap and OG images depend on it. After the first deploy, submit `https://YOUR_DOMAIN/sitemap.xml` in Google Search Console.
+- [ ] **Hindi and regional languages** (हिंदी, मराठी, தமிழ், বাংলা …)
+- [ ] **Phone OTP** as the default sign-in (built; needs an SMS provider such as MSG91)
+- [ ] **Kabaddi, kho-kho, carrom and gilli-danda** as their own categories
+- [ ] **Share a game to WhatsApp** with a rich preview card
+- [ ] **Society / campus groups**: private games only your building can see
+- [ ] Push notifications when the app is closed, and a lighter mode for slow 3G connections
+- [ ] Real ID verification (DigiLocker) and payouts to the host's bank account
 
-## Project layout
+---
 
-```
-src/
-  app/
-    (marketing)/     landing, /play SEO pages, privacy, terms
-    (auth)/sign-in   sign in + code
-    (app)/           map, games/[slug] (+pay, OG image), host/new, requests, messages, me
-    onboarding/      profile + welcome tour
-    actions/         server actions (zod-validated → Postgres RPCs)
-    api/             Razorpay order / verify / webhook
-    auth/            OAuth callback, post-sign-in router, sign out
-    sitemap.ts robots.ts manifest.ts opengraph-image.tsx
-  components/        ui/, map/, game/, chat/, auth/, layout/
-  lib/               supabase clients, queries, money, geo, format, sports, SEO helpers
-  proxy.ts           session refresh + route protection (Next 16 "proxy" = middleware)
-supabase/
-  migrations/        full schema, RLS, RPCs, storage buckets, realtime
-  tests/             SQL tests for the core rules (run in CI)
-  seed.sql           demo data for local development
-```
-
-## Placeholders and next steps
-
-- **ID check** is a self-declared toggle, as in the spec. Plug in a KYC provider (DigiLocker, HyperVerge) and set `id_verified` from a server webhook only.
-- **Phone OTP**: add Twilio or MSG91 under Supabase Auth → Phone, then set `NEXT_PUBLIC_ENABLE_PHONE_AUTH=true`.
-- **Push notifications when the app is closed**: add a service worker + Web Push (VAPID). The `notifications` table already records every event.
-- **Host payouts** from the wallet to a bank account (RazorpayX), and switching Razorpay to live after KYC.
-- Before launch: moderation and reporting, error tracking (Sentry), a legal review of `/privacy` and `/terms` (DPDP Act 2023).
+<p align="center">
+  <sub>Made for everyone who has ever stood in the lane shouting <i>"ek aur chahiye!"</i> 🏏</sub>
+</p>

@@ -117,13 +117,13 @@ export function ProfileForm({ profile, userId, mode, next }: Props) {
 
       <div>
         <Label htmlFor="name">Your name</Label>
-        <Input id="name" autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} maxLength={60} placeholder="Rohit Singh" />
+        <Input id="name" autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} maxLength={60} placeholder="Your name" />
       </div>
 
       <div>
         <Label htmlFor="area" hint="Neighbourhood or campus — not an address">Where you play</Label>
         <div className="flex gap-2">
-          <Input id="area" value={area} onChange={(e) => setArea(e.target.value)} maxLength={80} placeholder="HSR Layout" />
+          <Input id="area" value={area} onChange={(e) => setArea(e.target.value)} maxLength={80} placeholder="Model Town" />
           <Button type="button" variant="outline" onClick={useMyLocation} loading={locating} icon={<LocateFixed className="size-4" />} aria-label="Use my location">
             <span className="hidden sm:inline">Locate</span>
           </Button>

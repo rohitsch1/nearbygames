@@ -2,15 +2,15 @@ import { env } from "@/lib/env";
 
 export const site = {
   name: "nearbygames",
-  tagline: "Find or start a pickup game near you",
+  tagline: "Host or join gully games near you",
   description:
-    "nearbygames shows every pickup game happening near you — football, cricket, badminton, chess, FIFA nights and more. Ask to join free games, pay your share for paid ones, or drop your own game on the map.",
+    "nearbygames is the hyperlocal way to play in Bharat: host gully cricket in your lane, volleyball on an empty plot or carrom at home, and let everyone nearby find it on a map. Ask to join free games, pay your share for paid ones.",
   url: env.siteUrl,
   locale: "en_IN",
   twitter: "@nearbygames",
   themeColor: "#12b76a",
   /** Cities we pre-render landing pages for (more are added automatically from real games). */
-  featuredCities: ["Bengaluru", "Mumbai", "Delhi", "Hyderabad", "Pune", "Chennai", "Gurugram", "Noida", "Kolkata", "Ahmedabad"],
+  featuredCities: ["Hisar", "Rohtak", "Meerut", "Bareilly", "Indore", "Jaipur", "Lucknow", "Patna", "Nagpur", "Bengaluru", "Delhi", "Mumbai"],
 };
 
 export function absoluteUrl(path = "/") {

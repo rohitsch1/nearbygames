@@ -17,8 +17,8 @@ export default function Image() {
           nearbygames
         </div>
         <div style={{ display: "flex", flexDirection: "column" }}>
-          <div style={{ fontSize: 76, fontWeight: 800, lineHeight: 1.05, maxWidth: 900 }}>Find a pickup game near you. Or start one.</div>
-          <div style={{ fontSize: 32, marginTop: 24, opacity: 0.9 }}>Football · Cricket · Badminton · Chess · Gaming — every game within a few kilometres, right now.</div>
+          <div style={{ fontSize: 76, fontWeight: 800, lineHeight: 1.05, maxWidth: 900 }}>Gully cricket in your lane. Volleyball on the empty plot.</div>
+          <div style={{ fontSize: 32, marginTop: 24, opacity: 0.9 }}>Host a game at your home or any empty space — everyone nearby can find it and join.</div>
         </div>
       </div>
     ),

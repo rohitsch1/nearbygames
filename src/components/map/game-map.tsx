@@ -20,6 +20,7 @@ import type { NearbyGame, Sport } from "@/lib/types";
 import { GameMarker, UserDot } from "./game-marker";
 import { hasMapsKey, MapsProvider, useReverseGeocode } from "./maps-provider";
 import { PlaceSearch } from "./place-search";
+import { SchematicMap } from "./schematic-map";
 
 interface Props {
   userId: string | null;
@@ -54,7 +55,7 @@ function GameMapInner({ userId, home, areaName, favouriteSports }: Props) {
   const [highlight, setHighlight] = useState<string | null>(null);
   const [flyTo, setFlyTo] = useState<LatLng | null>(null);
   const [label, setLabel] = useState(areaName ?? "Near you");
-  const [mobileView, setMobileView] = useState<"map" | "list">(hasMapsKey ? "map" : "list");
+  const [mobileView, setMobileView] = useState<"map" | "list">("map");
   const lastGeocoded = useRef<LatLng | null>(null);
   const { position, status, locate } = useUserLocation((p) => {
     // First live fix: fly there (and, without a map, search around it).
@@ -174,7 +175,7 @@ function GameMapInner({ userId, home, areaName, favouriteSports }: Props) {
       {/* Side panel (tablet/desktop) */}
       <aside className="hidden w-80 shrink-0 flex-col border-r border-line bg-bg md:flex lg:w-[400px]">
         <div className="space-y-3 border-b border-line p-4">
-          <h2 className="text-xl font-extrabold">Games near {label.split(",")[0]}</h2>
+          <h2 className="text-xl font-extrabold">{label === "Near you" ? "Games near you" : `Games near ${label.split(",")[0]}`}</h2>
           {filterBar}
           {summary}
         </div>
@@ -211,7 +212,8 @@ function GameMapInner({ userId, home, areaName, favouriteSports }: Props) {
             )}
           </GoogleMap>
         ) : (
-          <NoMapNotice />
+          <SchematicMap games={withDistance} center={query.center} user={position} nearestId={nearestId}
+            highlight={highlight} onOpen={openGame} onHover={setHighlight} />
         )}
 
         {/* Mobile list view replaces the map */}
@@ -252,12 +254,10 @@ function GameMapInner({ userId, home, areaName, favouriteSports }: Props) {
               className="pointer-events-auto flex h-11 items-center gap-2 rounded-full bg-surface px-4 text-sm font-semibold shadow-float md:hidden">
               {mobileView === "map" ? <><List className="size-4" /> List</> : <><MapIcon className="size-4" /> Map</>}
             </button>
-            {hasMapsKey && (
-              <button type="button" onClick={recenter} aria-label="Centre on me"
-                className="pointer-events-auto ml-auto flex size-11 items-center justify-center rounded-full bg-surface shadow-float">
-                {status === "locating" ? <Spinner /> : <LocateFixed className={clsx("size-5", status === "live" && "text-info")} />}
-              </button>
-            )}
+            <button type="button" onClick={recenter} aria-label="Centre on me"
+              className="pointer-events-auto ml-auto flex size-11 items-center justify-center rounded-full bg-surface shadow-float">
+              {status === "locating" ? <Spinner /> : <LocateFixed className={clsx("size-5", status === "live" && "text-info")} />}
+            </button>
           </div>
           <div className="pointer-events-auto flex items-center gap-3 rounded-2xl bg-surface p-3 shadow-float md:ml-auto md:max-w-md">
             <div className="min-w-0 flex-1">
@@ -291,20 +291,6 @@ function Chip({ on, onClick, children }: { on: boolean; onClick: () => void; chi
         on ? "border-brand bg-brand text-white dark:text-[#052e1a]" : "border-line bg-surface text-ink hover:bg-surface-2")}>
       {children}
     </button>
-  );
-}
-
-function NoMapNotice() {
-  return (
-    <div className="flex size-full items-center justify-center bg-surface-2 p-6 text-center">
-      <div className="max-w-sm">
-        <p className="text-4xl">🗺️</p>
-        <p className="mt-3 font-bold">Map not configured</p>
-        <p className="mt-1 text-sm text-muted">
-          Add <code className="rounded bg-surface px-1">NEXT_PUBLIC_GOOGLE_MAPS_API_KEY</code> to show the live map. Games are listed alongside.
-        </p>
-      </div>
-    </div>
   );
 }
 

@@ -16,6 +16,10 @@ export const FAQ = [
     a: "No — anyone can open the map and browse games nearby. You sign in with a one-time code (no passwords) when you want to ask to join, pay for a spot or host.",
   },
   {
+    q: "Can I host a game at my home or an empty plot?",
+    a: "Yes — that's what nearbygames is for: your lane, your terrace, the khali plot, or your living room for carrom. The pin is visible to everyone nearby, so for a game at home drop it at the lane or a landmark, and share the exact house in chat once you've accepted someone.",
+  },
+  {
     q: "How do I host a game?",
     a: "Tap “Start a game”, pick the sport, drop a pin on the exact spot, set the time and how many players you need, and choose free or paid. It appears on the map for everyone nearby within seconds.",
   },

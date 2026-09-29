@@ -170,12 +170,12 @@ export function CreateGameForm({ userId, home, hasName, canCharge, favouriteSpor
         <div className="grid gap-4 sm:grid-cols-[2fr_1fr]">
           <div>
             <Label htmlFor="spot">Name the spot</Label>
-            <Input id="spot" value={spotName} onChange={(e) => setSpotName(e.target.value)} maxLength={80} placeholder="HSR Sector 2 Turf" aria-invalid={!!errors.spot} />
+            <Input id="spot" value={spotName} onChange={(e) => setSpotName(e.target.value)} maxLength={80} placeholder="Gali No. 4, near Shiv Mandir" aria-invalid={!!errors.spot} />
             <FieldError>{errors.spot}</FieldError>
           </div>
           <div>
             <Label htmlFor="city">City</Label>
-            <Input id="city" value={city} onChange={(e) => setCity(e.target.value)} maxLength={60} placeholder="Bengaluru" />
+            <Input id="city" value={city} onChange={(e) => setCity(e.target.value)} maxLength={60} placeholder="Hisar" />
           </div>
         </div>
       </section>
@@ -225,7 +225,7 @@ export function CreateGameForm({ userId, home, hasName, canCharge, favouriteSpor
         {isPaid && (
           <div className="mt-4 max-w-xs">
             <Label htmlFor="fee">Fee per player (₹)</Label>
-            <Input id="fee" type="number" inputMode="numeric" min={10} max={10000} value={fee} onChange={(e) => setFee(e.target.value)} placeholder="150" aria-invalid={!!errors.fee} />
+            <Input id="fee" type="number" inputMode="numeric" min={10} max={10000} value={fee} onChange={(e) => setFee(e.target.value)} placeholder="60" aria-invalid={!!errors.fee} />
             <FieldError>{errors.fee}</FieldError>
             {feePaise >= 1000 && (
               <p className="mt-1.5 text-xs text-muted">
@@ -239,7 +239,7 @@ export function CreateGameForm({ userId, home, hasName, canCharge, favouriteSpor
       <section>
         <Label htmlFor="notes" hint={`${notes.length}/500`}>Notes for players</Label>
         <Textarea id="notes" value={notes} onChange={(e) => setNotes(e.target.value)} maxLength={500} rows={3}
-          placeholder="Bibs and ball sorted, just bring turf shoes. Gate 2, next to the parking." />
+          placeholder="Tennis ball, 6 overs a side. Blue gate, ground floor. Bring water." />
       </section>
 
       <div className="fixed inset-x-0 bottom-[calc(4rem+env(safe-area-inset-bottom))] z-30 border-t border-line bg-surface/95 p-4 backdrop-blur md:static md:border-0 md:bg-transparent md:p-0">
